@@ -1,0 +1,10 @@
+{
+    "repository": "sjmeehan9/void-breaker",
+    "branch": "main",
+    "agent_instructions": "Complete documentation for Phase 6",
+    "model": "claude-opus-4.6",
+    "role": "implement",
+    "agent_paths": [".github/agents/PhaseDocs.agent.md"],
+    "callback_url": "https://joint-filly-inherently.ngrok-free.app",
+    "timeout_minutes": 20
+}
