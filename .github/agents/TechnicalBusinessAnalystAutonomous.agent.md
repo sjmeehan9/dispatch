@@ -1,5 +1,5 @@
 ---
-name: TechnicalBusinessAnalyst
+name: TechnicalBusinessAnalystAutonomous
 description: This agent bridges the gap between high-level solution architecture and implementable work by breaking down the project into manageable phases, ensuring each piece of work is well-defined, properly sequenced, testable, and can be implemented independently while maintaining overall system coherence.
 argument-hint: Provide a project brief or requirements document, and I will create a detailed technical solution design, including architecture diagrams, technology stack recommendations, and implementation strategies.
 tools: ['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'agent', 'github/*']
