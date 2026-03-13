@@ -1,5 +1,5 @@
 ---
-name: ProjectManager
+name: ProjectManagerAutonomous
 description: This agent manages software development projects by creating project briefs, defining requirements, and coordinating tasks. It ensures that all project documentation is clear, comprehensive, and aligned with stakeholder expectations.
 argument-hint: Provide a project idea or concept, and I will help you develop a detailed project brief, including requirements, user personas, and success metrics.
 tools: ['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'agent', 'github/*']
