@@ -1,5 +1,5 @@
 ---
-name: SolutionsArchitect
+name: SolutionsArchitectLiteAutonomous
 description: Transform the approved project brief into a comprehensive technical solution design that bridges business requirements with implementable architecture.
 argument-hint: Provide a project brief or requirements document, and I will create a detailed technical solution design, including architecture diagrams, technology stack recommendations, and implementation strategies.
 tools: ['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'agent', 'github/*']
