@@ -1,0 +1,381 @@
+{
+  "lastUpdated": "2026-03-14",
+  "phases": [
+    {
+      "phaseId": 1,
+      "phaseName": "Project Bootstrap & Environment Setup",
+      "status": "refined",
+      "componentBreakdownDoc": "docs/phase-1-component-breakdown.md",
+      "components": [
+        {
+          "componentId": "1.1",
+          "componentName": "Environment & Repository Initialisation",
+          "owner": "Human",
+          "priority": "Must-have",
+          "estimatedEffort": "1 hour",
+          "status": "not-started"
+        },
+        {
+          "componentId": "1.2",
+          "componentName": "Repository Structure & Package Configuration",
+          "owner": "AI Agent",
+          "priority": "Must-have",
+          "estimatedEffort": "2 hours",
+          "status": "not-started"
+        },
+        {
+          "componentId": "1.3",
+          "componentName": "CI/CD Pipeline & Quality Tooling",
+          "owner": "AI Agent",
+          "priority": "Must-have",
+          "estimatedEffort": "2 hours",
+          "status": "not-started"
+        },
+        {
+          "componentId": "1.4",
+          "componentName": "E2E Testing Scenarios, README & Phase Validation",
+          "owner": "AI Agent",
+          "priority": "Must-have",
+          "estimatedEffort": "2 hours",
+          "status": "not-started"
+        }
+      ]
+    },
+    {
+      "phaseId": 2,
+      "phaseName": "Data Models, Configuration & Secrets Management",
+      "status": "refined",
+      "componentBreakdownDoc": "docs/phase-2-component-breakdown.md",
+      "components": [
+        {
+          "componentId": "2.1",
+          "componentName": "Core Data Models",
+          "owner": "AI Agent",
+          "priority": "Must-have",
+          "estimatedEffort": "2 hours",
+          "status": "not-started"
+        },
+        {
+          "componentId": "2.2",
+          "componentName": "Application Settings Module",
+          "owner": "AI Agent",
+          "priority": "Must-have",
+          "estimatedEffort": "2 hours",
+          "status": "not-started"
+        },
+        {
+          "componentId": "2.3",
+          "componentName": "Config & Secrets Manager Service",
+          "owner": "AI Agent",
+          "priority": "Must-have",
+          "estimatedEffort": "2 hours",
+          "status": "not-started"
+        },
+        {
+          "componentId": "2.4",
+          "componentName": "Default Executor Configuration",
+          "owner": "AI Agent",
+          "priority": "Must-have",
+          "estimatedEffort": "1 hour",
+          "status": "not-started"
+        },
+        {
+          "componentId": "2.5",
+          "componentName": "Unit Tests, Validation & Phase Documentation",
+          "owner": "AI Agent",
+          "priority": "Must-have",
+          "estimatedEffort": "2 hours",
+          "status": "not-started"
+        }
+      ]
+    },
+    {
+      "phaseId": 3,
+      "phaseName": "Core Backend Services",
+      "status": "refined",
+      "componentBreakdownDoc": "docs/phase-3-component-breakdown.md",
+      "components": [
+        {
+          "componentId": "3.1",
+          "componentName": "GitHub API Client",
+          "owner": "AI Agent",
+          "priority": "Must-have",
+          "estimatedEffort": "2 hours",
+          "status": "not-started"
+        },
+        {
+          "componentId": "3.2",
+          "componentName": "Project Service: Linking & Scanning",
+          "owner": "AI Agent",
+          "priority": "Must-have",
+          "estimatedEffort": "2 hours",
+          "status": "not-started"
+        },
+        {
+          "componentId": "3.3",
+          "componentName": "Project Service: CRUD & Persistence",
+          "owner": "AI Agent",
+          "priority": "Must-have",
+          "estimatedEffort": "2 hours",
+          "status": "not-started"
+        },
+        {
+          "componentId": "3.4",
+          "componentName": "Action Generator Service",
+          "owner": "AI Agent",
+          "priority": "Must-have",
+          "estimatedEffort": "2 hours",
+          "status": "not-started"
+        },
+        {
+          "componentId": "3.5",
+          "componentName": "Payload Resolver Service",
+          "owner": "AI Agent",
+          "priority": "Must-have",
+          "estimatedEffort": "2 hours",
+          "status": "not-started"
+        },
+        {
+          "componentId": "3.6",
+          "componentName": "Executor Protocol & Autopilot Implementation",
+          "owner": "AI Agent",
+          "priority": "Must-have",
+          "estimatedEffort": "2 hours",
+          "status": "not-started"
+        },
+        {
+          "componentId": "3.7",
+          "componentName": "Webhook Service",
+          "owner": "AI Agent",
+          "priority": "Must-have",
+          "estimatedEffort": "1 hour",
+          "status": "not-started"
+        },
+        {
+          "componentId": "3.8",
+          "componentName": "Unit Tests, Validation & Phase Documentation",
+          "owner": "AI Agent",
+          "priority": "Must-have",
+          "estimatedEffort": "3 hours",
+          "status": "not-started"
+        }
+      ]
+    },
+    {
+      "phaseId": 4,
+      "phaseName": "MVP UI & End-to-End Integration",
+      "status": "refined",
+      "componentBreakdownDoc": "docs/phase-4-component-breakdown.md",
+      "components": [
+        {
+          "componentId": "4.1",
+          "componentName": "NiceGUI App Entry Point & Routing",
+          "owner": "AI Agent",
+          "priority": "Must-have",
+          "estimatedEffort": "2 hours",
+          "status": "not-started"
+        },
+        {
+          "componentId": "4.2",
+          "componentName": "Initial Screen",
+          "owner": "AI Agent",
+          "priority": "Must-have",
+          "estimatedEffort": "2 hours",
+          "status": "not-started"
+        },
+        {
+          "componentId": "4.3",
+          "componentName": "Executor Configuration Screen",
+          "owner": "AI Agent",
+          "priority": "Must-have",
+          "estimatedEffort": "2 hours",
+          "status": "not-started"
+        },
+        {
+          "componentId": "4.4",
+          "componentName": "Action Type Defaults & Secrets Screens",
+          "owner": "AI Agent",
+          "priority": "Must-have",
+          "estimatedEffort": "3 hours",
+          "status": "not-started"
+        },
+        {
+          "componentId": "4.5",
+          "componentName": "Link New Project Screen",
+          "owner": "AI Agent",
+          "priority": "Must-have",
+          "estimatedEffort": "2 hours",
+          "status": "not-started"
+        },
+        {
+          "componentId": "4.6",
+          "componentName": "Load Project Screen",
+          "owner": "AI Agent",
+          "priority": "Must-have",
+          "estimatedEffort": "1 hour",
+          "status": "not-started"
+        },
+        {
+          "componentId": "4.7",
+          "componentName": "Main Screen Layout & Action List",
+          "owner": "AI Agent",
+          "priority": "Must-have",
+          "estimatedEffort": "3 hours",
+          "status": "not-started"
+        },
+        {
+          "componentId": "4.8",
+          "componentName": "Main Screen Response Display & Controls",
+          "owner": "AI Agent",
+          "priority": "Must-have",
+          "estimatedEffort": "2 hours",
+          "status": "not-started"
+        },
+        {
+          "componentId": "4.9",
+          "componentName": "Debug Action Insertion & Payload Editing",
+          "owner": "AI Agent",
+          "priority": "Must-have",
+          "estimatedEffort": "2 hours",
+          "status": "not-started"
+        },
+        {
+          "componentId": "4.10",
+          "componentName": "Integration Testing & Phase Validation",
+          "owner": "AI Agent",
+          "priority": "Must-have",
+          "estimatedEffort": "3 hours",
+          "status": "not-started"
+        }
+      ]
+    },
+    {
+      "phaseId": 5,
+      "phaseName": "UI Enhancements & Workflow Polish",
+      "status": "refined",
+      "componentBreakdownDoc": "docs/phase-5-component-breakdown.md",
+      "components": [
+        {
+          "componentId": "5.1",
+          "componentName": "Navigation Flow & State Management",
+          "owner": "AI Agent",
+          "priority": "Must-have",
+          "estimatedEffort": "2 hours",
+          "status": "not-started"
+        },
+        {
+          "componentId": "5.2",
+          "componentName": "Error Handling & User Feedback",
+          "owner": "AI Agent",
+          "priority": "Must-have",
+          "estimatedEffort": "2 hours",
+          "status": "not-started"
+        },
+        {
+          "componentId": "5.3",
+          "componentName": "Mobile Responsiveness",
+          "owner": "AI Agent",
+          "priority": "Must-have",
+          "estimatedEffort": "3 hours",
+          "status": "not-started"
+        },
+        {
+          "componentId": "5.4",
+          "componentName": "Workflow Quality-of-Life",
+          "owner": "AI Agent",
+          "priority": "Must-have",
+          "estimatedEffort": "2 hours",
+          "status": "not-started"
+        },
+        {
+          "componentId": "5.5",
+          "componentName": "Testing & Phase Validation",
+          "owner": "AI Agent",
+          "priority": "Must-have",
+          "estimatedEffort": "2 hours",
+          "status": "not-started"
+        }
+      ]
+    },
+    {
+      "phaseId": 6,
+      "phaseName": "LLM-Assisted Payload Generation",
+      "status": "refined",
+      "componentBreakdownDoc": "docs/phase-6-component-breakdown.md",
+      "components": [
+        {
+          "componentId": "6.1",
+          "componentName": "OpenAI SDK Integration",
+          "owner": "AI Agent",
+          "priority": "Must-have",
+          "estimatedEffort": "2 hours",
+          "status": "not-started"
+        },
+        {
+          "componentId": "6.2",
+          "componentName": "LLM Payload Generation Logic",
+          "owner": "AI Agent",
+          "priority": "Must-have",
+          "estimatedEffort": "3 hours",
+          "status": "not-started"
+        },
+        {
+          "componentId": "6.3",
+          "componentName": "UI Integration",
+          "owner": "AI Agent",
+          "priority": "Must-have",
+          "estimatedEffort": "2 hours",
+          "status": "not-started"
+        },
+        {
+          "componentId": "6.4",
+          "componentName": "Testing & Phase Validation",
+          "owner": "AI Agent",
+          "priority": "Must-have",
+          "estimatedEffort": "2 hours",
+          "status": "not-started"
+        }
+      ]
+    },
+    {
+      "phaseId": 7,
+      "phaseName": "End-to-End Testing, Documentation & Release",
+      "status": "refined",
+      "componentBreakdownDoc": "docs/phase-7-component-breakdown.md",
+      "components": [
+        {
+          "componentId": "7.1",
+          "componentName": "End-to-End Test Suite",
+          "owner": "AI Agent",
+          "priority": "Must-have",
+          "estimatedEffort": "3 hours",
+          "status": "not-started"
+        },
+        {
+          "componentId": "7.2",
+          "componentName": "Cross-Device Verification",
+          "owner": "Human",
+          "priority": "Must-have",
+          "estimatedEffort": "2 hours",
+          "status": "not-started"
+        },
+        {
+          "componentId": "7.3",
+          "componentName": "Documentation",
+          "owner": "AI Agent",
+          "priority": "Must-have",
+          "estimatedEffort": "3 hours",
+          "status": "not-started"
+        },
+        {
+          "componentId": "7.4",
+          "componentName": "Final Quality Checks & Release Preparation",
+          "owner": "AI Agent",
+          "priority": "Must-have",
+          "estimatedEffort": "2 hours",
+          "status": "not-started"
+        }
+      ]
+    }
+  ]
+}

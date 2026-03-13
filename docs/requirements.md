@@ -7,7 +7,7 @@ dispatch
 To organise, orchestrate and execute AI agent implementation of application deliverables in a simple, minimal way.
 
 ## Business Logic
- - This application will need the ability to be opened from a iPhone or Mac, and fully usable on both devices. It’s ok if this has to be a website hosted on AWS Amplify, or simple desktop app that can be stored on OneDrive for me to open across devices
+ - This application will need the ability to be opened from a iPhone or Mac, and fully usable on both devices. Maybe a simple desktop app that can be stored on OneDrive for me to open across devices
  - This application will only be used by me on my devices, but the repo will be open source for others to clone/fork
  - The UI will open up to a screen with "load project" or "link new project" options
  - Project data will be stored in a manner that is available to all devices I'm using, not pushed to the public repo
@@ -37,7 +37,8 @@ To organise, orchestrate and execute AI agent implementation of application deli
  - The user can click a button against the Execute Action item to indicate it has been completed
 
 ## Requirements
- - If any AWS infrastructure needs to be created, use the AWS CDK (Python)
+ - No cloud infrastructure, make this work entirely local
+ - The solution design and phase plan need to enable all of the requirements, however keep the build as simple as possible
  - Secrets and keys are set in a local environment file that does not get pushed
 
 ## References
