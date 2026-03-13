@@ -30,3 +30,32 @@
 
 ### Deviations
 - None.
+
+## Component 1.3 - CI/CD Pipeline & Quality Tooling
+- Added a new GitHub Actions workflow at `.github/workflows/ci.yml` with `push` and `pull_request` triggers on `main`.
+- Configured a single `quality-checks` job on `ubuntu-latest` with Python 3.13 that runs:
+  - `black --check app/src/`
+  - `isort --check-only app/src/`
+  - `pytest -q --cov=app/src --cov-report=term-missing`
+  - `python scripts/evals.py`
+- Mapped GitHub secret `TOKEN` to runtime `GITHUB_TOKEN` in CI job environment so secrets are sourced from repository/environment secrets rather than a committed `.env/.env.local`.
+- Implemented `scripts/evals.py` with AST-based quality checks:
+  - Public class/function docstring enforcement
+  - TODO/FIXME/NotImplementedError text pattern detection
+  - Placeholder function body detection (`pass` or `...` as sole body)
+  - Per-violation file:line reporting with pass/fail summary exit code
+- Added `tests/conftest.py` with:
+  - `--autopilot-confirm` CLI option
+  - `requires_autopilot` auto-skip hook when confirmation is not provided
+  - `tmp_data_dir` fixture for isolated test data directories
+  - `mock_env` fixture for test environment variable isolation
+- Added focused unit tests:
+  - `tests/test_evals.py` validating docstring and placeholder/TODO detection behavior
+  - `tests/test_conftest.py` validating pytest hook behavior and shared fixtures
+
+### Decisions
+- Kept `scripts/evals.py` scanning scope limited to `app/src/` to match component acceptance criteria and avoid noise from docs/tooling files.
+- Included both `TOKEN` and `GITHUB_TOKEN` in `mock_env` fixture to align local test isolation with GitHub secret naming constraints in CI.
+
+### Deviations
+- None.

@@ -35,6 +35,9 @@ profile = "black"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+  "requires_autopilot: marks tests that require confirmed live Autopilot access",
+]
 
 [tool.setuptools.packages.find]
 where = ["."]
