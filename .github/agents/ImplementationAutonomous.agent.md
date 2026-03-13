@@ -1,5 +1,5 @@
 ---
-name: Implement
+name: ImplementAutonomous
 description: Production-grade code implementation agent.
 argument-hint: Select this agent and specify the component and phase to implement (e.g., 'Component 1.3 of Phase 1').
 tools: ['vscode', 'execute', 'read', 'agent', 'edit', 'search', 'web', 'todo', 'agent', 'github/*']
