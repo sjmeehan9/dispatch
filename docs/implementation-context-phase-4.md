@@ -158,3 +158,36 @@
 
 ### Deviations
 - Updated guidance/error text to prioritize GitHub Secrets usage (repository/environment secrets and `TOKEN` alias) rather than requiring `.env/.env.local` in remote contexts.
+
+## Component 4.6 - Load Project Screen
+- Implemented `render_load_project(app_state)` in `app/src/ui/load_project.py`.
+- Added `/project/load` screen rendering with:
+  - Title: `Load Project`
+  - Empty-state text: `No saved projects. Link a new project to get started.`
+  - Link action button to `/project/link`
+  - Back navigation button to `/`
+- Added saved-project list rendering from `ProjectService.list_projects()`:
+  - One card per project summary
+  - Clickable project-name button to load via `ProjectService.load_project(project_id)`
+  - Repository and updated timestamp labels per card
+  - Navigation to `/project/{project_id}` on successful load
+- Added delete workflow on each project card:
+  - Delete icon opens confirmation dialog (`Delete project {name}?`)
+  - Confirm calls `ProjectService.delete_project(project_id)`
+  - List refreshes immediately after deletion
+- Added robust local-operation service wiring:
+  - Load/list/delete use a token from `GITHUB_TOKEN`, then `TOKEN`, then current-project token key, with safe non-empty fallback
+  - Keeps component functional in local and CI/GitHub-secrets contexts without requiring committed `.env/.env.local`
+- Updated `app/src/main.py`:
+  - Imported `render_load_project`
+  - Replaced `/project/load` placeholder with `render_load_project(app_state)`
+- Added focused tests:
+  - `tests/test_load_project.py` for empty-list and multi-project rendering flows
+  - `tests/test_main.py` route-content assertion for `/project/load`
+
+### Decisions
+- Used `@ui.refreshable` for the project list region so deletion updates are isolated and instant.
+- Kept GitHub token usage out of UI inputs for this screen; local project operations rely on runtime secret resolution only.
+
+### Deviations
+- None.

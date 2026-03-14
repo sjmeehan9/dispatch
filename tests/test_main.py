@@ -94,6 +94,16 @@ def test_link_project_route_renders_form(main_module: ModuleType) -> None:
     assert "Scan &amp; Link" in response.text
 
 
+def test_load_project_route_renders_screen(main_module: ModuleType) -> None:
+    """Load project route should render expected screen content."""
+    with TestClient(main_module.app) as client:
+        response = client.get("/project/load")
+
+    assert response.status_code == 200
+    assert "Load Project" in response.text
+    assert "Back to Home" in response.text
+
+
 def test_webhook_callback_stores_payload(main_module: ModuleType) -> None:
     """Webhook callback should persist payload data to WebhookService."""
     payload = {"run_id": "run-123", "status": "completed"}
