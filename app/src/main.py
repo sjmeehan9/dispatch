@@ -12,6 +12,7 @@ from app.src.ui.action_type_defaults import render_action_type_defaults
 from app.src.ui.executor_config import render_executor_config
 from app.src.ui.initial_screen import render_initial_screen
 from app.src.ui.link_project import render_link_project
+from app.src.ui.load_project import render_load_project
 from app.src.ui.secrets_screen import render_secrets_screen
 from app.src.ui.state import AppState
 
@@ -78,8 +79,8 @@ def link_project_page() -> None:
 
 @ui.page("/project/load")
 def load_project_page() -> None:
-    """Render the load project route placeholder."""
-    ui.label("Load project route")
+    """Render the load project screen."""
+    render_load_project(app_state)
 
 
 @ui.page("/project/{project_id}")
