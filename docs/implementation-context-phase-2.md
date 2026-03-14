@@ -50,3 +50,21 @@
 
 ### Deviations
 - None.
+
+## Component 2.4 - Default Executor Configuration
+- Updated `app/config/defaults.yaml` to the Component 2.4 schema with top-level `executor` and `action_type_defaults` keys.
+- Added complete Autopilot executor defaults (`executor_id`, `executor_name`, `api_endpoint`, `api_key_env_key`, `webhook_url`) with an empty webhook value for user-provided callbacks.
+- Reworked all five action templates (`implement`, `test`, `review`, `document`, `debug`) to match the documented Autopilot payload shape from `docs/sample-payload.json`.
+- Standardized template placeholders (`{{repository}}`, `{{branch}}`, `{{agent_paths}}`, `{{webhook_url}}`) and added component/phase placeholders where required by the component spec.
+- Set role mapping to Autopilot-compatible values: `implement` for implement/test/document/debug and `review` for review.
+- Added `pr_number: "{{pr_number}}"` in the review template and kept debug `agent_instructions` empty for user-supplied troubleshooting prompts.
+- Added YAML comments documenting each placeholder so defaults remain understandable and editable by users.
+- Updated `ConfigManager._load_defaults()` to read the new `executor` key (while keeping compatibility with legacy `executor_config`) and fail fast if required sections are missing.
+- Added focused tests in `tests/test_config_manager.py` validating: YAML parse success, model validation (`ExecutorConfig`, `ActionTypeDefaults`), and required placeholders/roles across all templates.
+
+### Decisions
+- Kept backward compatibility in `_load_defaults()` for `executor_config` to avoid breaking existing local persisted defaults during upgrade.
+- Kept `agent_paths` as the `{{agent_paths}}` placeholder value to align with spec guidance that the resolver injects the discovered path array.
+
+### Deviations
+- None.

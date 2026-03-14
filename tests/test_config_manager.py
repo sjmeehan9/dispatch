@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import yaml
+
 from app.src.config.settings import Settings
 from app.src.models import ActionTypeDefaults, ExecutorConfig
 from app.src.services.config_manager import ConfigManager
@@ -124,3 +126,51 @@ def test_atomic_json_write_replaces_temporary_file(tmp_path, monkeypatch) -> Non
     assert tmp_path_for_file.exists() is False
     persisted = json.loads(config_path.read_text(encoding="utf-8"))
     assert persisted["executor_id"] == "autopilot"
+
+
+def test_defaults_yaml_parses_into_required_models() -> None:
+    defaults_path = (
+        Path(__file__).resolve().parents[1] / "app" / "config" / "defaults.yaml"
+    )
+    defaults_payload = yaml.safe_load(defaults_path.read_text(encoding="utf-8"))
+
+    executor = ExecutorConfig.model_validate(defaults_payload["executor"])
+    action_defaults = ActionTypeDefaults.model_validate(
+        defaults_payload["action_type_defaults"]
+    )
+
+    assert executor.executor_id == "autopilot"
+    assert executor.webhook_url is None
+    assert action_defaults.review["role"] == "review"
+
+
+def test_defaults_yaml_templates_include_required_placeholders() -> None:
+    defaults_path = (
+        Path(__file__).resolve().parents[1] / "app" / "config" / "defaults.yaml"
+    )
+    action_defaults = yaml.safe_load(defaults_path.read_text(encoding="utf-8"))[
+        "action_type_defaults"
+    ]
+
+    expected_common = {
+        "repository": "{{repository}}",
+        "branch": "{{branch}}",
+        "model": "claude-opus-4.6",
+        "agent_paths": "{{agent_paths}}",
+        "callback_url": "{{webhook_url}}",
+    }
+    for action_type in ("implement", "test", "review", "document", "debug"):
+        for key, expected_value in expected_common.items():
+            assert action_defaults[action_type][key] == expected_value
+
+    assert "{{component_id}}" in action_defaults["implement"]["agent_instructions"]
+    assert "{{component_name}}" in action_defaults["implement"]["agent_instructions"]
+    assert (
+        "{{component_breakdown_doc}}"
+        in action_defaults["implement"]["agent_instructions"]
+    )
+    assert "{{phase_id}}" in action_defaults["test"]["agent_instructions"]
+    assert "{{phase_name}}" in action_defaults["test"]["agent_instructions"]
+    assert action_defaults["review"]["pr_number"] == "{{pr_number}}"
+    assert action_defaults["review"]["role"] == "review"
+    assert action_defaults["debug"]["agent_instructions"] == ""

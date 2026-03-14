@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pydantic import AnyHttpUrl, BaseModel, ConfigDict
+from pydantic import AnyHttpUrl, BaseModel, ConfigDict, field_validator
 
 
 class ExecutorConfig(BaseModel):
@@ -15,6 +15,15 @@ class ExecutorConfig(BaseModel):
     api_endpoint: AnyHttpUrl
     api_key_env_key: str
     webhook_url: AnyHttpUrl | None = None
+
+    @field_validator("webhook_url", mode="before")
+    @classmethod
+    def _normalise_empty_webhook_url(cls, value: object) -> object:
+        """Normalise blank webhook strings to None for optional URL validation."""
+
+        if value == "":
+            return None
+        return value
 
 
 class ActionTypeDefaults(BaseModel):
