@@ -1,6 +1,7 @@
 """Service modules for Dispatch."""
 
 from app.src.services.action_generator import ActionGenerator
+from app.src.services.executor import AutopilotExecutor, Executor
 from app.src.services.github_client import (
     GitHubAPIError,
     GitHubAuthError,
@@ -19,6 +20,8 @@ from app.src.services.project_service import (
 
 __all__ = [
     "ActionGenerator",
+    "AutopilotExecutor",
+    "Executor",
     "GitHubAPIError",
     "GitHubAuthError",
     "GitHubClient",
