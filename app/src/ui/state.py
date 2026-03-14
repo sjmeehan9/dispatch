@@ -13,6 +13,7 @@ from app.src.services import (
     WebhookService,
 )
 from app.src.services.config_manager import ConfigManager
+from app.src.services.project_service import ProjectNotFoundError
 
 
 class AppState:
@@ -28,6 +29,10 @@ class AppState:
         self.autopilot_executor = AutopilotExecutor(self.settings)
 
         self.current_project: Project | None = None
+        self.last_dispatched_action = None
+        self.dispatching_action_id: str | None = None
+        self.completing_action_id: str | None = None
+        self.navigation_stack: list[str] = []
 
     def get_github_client(self, token: str) -> GitHubClient:
         """Create a GitHub client for a provided token."""
@@ -75,3 +80,41 @@ class AppState:
             self.config_manager.get_executor_config()
         if self.is_action_types_configured:
             self.config_manager.get_action_type_defaults()
+
+    def clear_project(self) -> None:
+        """Clear project-scoped runtime state when leaving project context."""
+        self.current_project = None
+        self.last_dispatched_action = None
+        self.dispatching_action_id = None
+        self.completing_action_id = None
+
+    def ensure_project(self, project_id: str) -> Project | None:
+        """Return the requested project from memory or disk, otherwise redirect home."""
+        if (
+            self.current_project is not None
+            and self.current_project.project_id == project_id
+        ):
+            return self.current_project
+
+        token: str | None = None
+        if self.current_project is not None:
+            current_token_key = getattr(
+                self.current_project, "github_token_env_key", ""
+            )
+            if isinstance(current_token_key, str) and current_token_key:
+                token = self.settings.get_secret(current_token_key)
+        if not token:
+            token = self.settings.get_secret("GITHUB_TOKEN")
+        if not token:
+            token = self.settings.get_secret("TOKEN")
+        if not token:
+            token = "local-project-access"
+
+        try:
+            project = self.get_project_service(token).load_project(project_id)
+        except (ProjectNotFoundError, OSError, ValueError):
+            self.clear_project()
+            return None
+
+        self.current_project = project
+        return project

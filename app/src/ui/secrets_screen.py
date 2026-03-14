@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from nicegui import ui
 
+from app.src.ui.components import page_layout
 from app.src.ui.state import AppState
 
 
@@ -15,6 +16,7 @@ def _secret_placeholder(app_state: AppState, env_key: str) -> str:
 
 def render_secrets_screen(app_state: AppState) -> None:
     """Render the secrets management screen."""
+    page_layout("Manage Secrets", back_url="/", ui_module=ui)
     with ui.column().classes(
         "items-center mx-auto justify-center q-pa-xl q-gutter-md w-full max-w-xl"
     ):
@@ -63,7 +65,4 @@ def render_secrets_screen(app_state: AppState) -> None:
                 ui.notify("Secrets saved", type="positive")
 
             with ui.row().classes("w-full justify-end q-gutter-sm q-mt-md"):
-                ui.button("Back to Home", on_click=lambda: ui.navigate.to("/")).props(
-                    "outline"
-                )
                 ui.button("Save", on_click=_save_secrets, color="primary")

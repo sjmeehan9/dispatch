@@ -7,6 +7,7 @@ from nicegui import run, ui
 from app.src.config.constants import REPOSITORY_PATTERN
 from app.src.models import Action, Project
 from app.src.services.project_service import ProjectLinkError
+from app.src.ui.components import loading_overlay, page_layout, with_loading
 from app.src.ui.state import AppState
 
 
@@ -67,6 +68,9 @@ async def _scan_and_link(
 
 def render_link_project(app_state: AppState) -> None:
     """Render the link new project screen."""
+    page_layout("Link New Project", back_url="/", ui_module=ui)
+    link_overlay = loading_overlay("Scanning and linking project...", ui_module=ui)
+
     with ui.column().classes(
         "items-center mx-auto justify-center q-pa-xl q-gutter-md w-full max-w-xl"
     ):
@@ -97,11 +101,6 @@ def render_link_project(app_state: AppState) -> None:
                 "GitHub Actions uses TOKEN as alias)."
             ).classes("text-caption text-grey-7")
 
-            with ui.row().classes("items-center q-gutter-sm") as spinner_row:
-                ui.spinner(size="sm")
-                ui.label("Scanning repository...")
-            spinner_row.set_visibility(False)
-
             result_label = ui.label("").classes("text-body2")
             result_label.set_visibility(False)
 
@@ -115,11 +114,13 @@ def render_link_project(app_state: AppState) -> None:
                     )
                     return
 
-                spinner_row.set_visibility(True)
                 result_label.set_visibility(False)
                 result_label.text = ""
                 try:
-                    project = await _scan_and_link(app_state, repository, token_env_key)
+                    project = await with_loading(
+                        lambda: _scan_and_link(app_state, repository, token_env_key),
+                        link_overlay,
+                    )
                 except ProjectLinkError as exc:
                     result_label.text = _normalise_link_error(str(exc), repository)
                     result_label.classes(replace="text-body2 text-negative")
@@ -141,11 +142,6 @@ def render_link_project(app_state: AppState) -> None:
                     result_label.classes(replace="text-body2 text-positive")
                     result_label.set_visibility(True)
                     ui.navigate.to(f"/project/{project.project_id}")
-                finally:
-                    spinner_row.set_visibility(False)
 
             with ui.row().classes("w-full justify-end q-gutter-sm q-mt-md"):
-                ui.button("Back to Home", on_click=lambda: ui.navigate.to("/")).props(
-                    "outline"
-                )
                 ui.button("Scan & Link", on_click=_handle_scan, color="primary")

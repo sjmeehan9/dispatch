@@ -23,6 +23,9 @@ class _FakeContext:
     def classes(self, _: str) -> _FakeContext:
         return self
 
+    def props(self, _: str) -> _FakeContext:
+        return self
+
 
 class _FakeInput(_FakeContext):
     """Fake input control with value and validation support."""
@@ -80,6 +83,9 @@ class _FakeUI:
     def column(self) -> _FakeContext:
         return _FakeContext()
 
+    def header(self) -> _FakeContext:
+        return _FakeContext()
+
     def card(self) -> _FakeContext:
         return _FakeContext()
 
@@ -102,14 +108,19 @@ class _FakeUI:
 
     def button(
         self,
-        label: str,
+        label: str | None = None,
         on_click: object | None = None,
         color: str | None = None,
+        icon: str | None = None,
     ) -> _FakeButton:
         _ = color
-        button = _FakeButton(label, on_click=on_click)
-        self.buttons[label] = button
+        rendered_label = label if label is not None else icon or ""
+        button = _FakeButton(rendered_label, on_click=on_click)
+        self.buttons[rendered_label] = button
         return button
+
+    def separator(self) -> _FakeContext:
+        return _FakeContext()
 
     def notify(self, message: str, type: str | None = None) -> None:
         self.notifications.append((message, type))
@@ -218,12 +229,12 @@ def test_render_executor_config_rejects_invalid_endpoint_url(
 def test_render_executor_config_back_button_navigates_home(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """Back button should navigate to the initial screen route."""
+    """Shared header back icon should navigate to the initial screen route."""
     fake_ui = _FakeUI()
     monkeypatch.setattr(executor_config, "ui", fake_ui)
     app_state, _, _ = _build_app_state(tmp_path)
 
     executor_config.render_executor_config(app_state)
 
-    fake_ui.buttons["Back to Home"].click()
+    fake_ui.buttons["arrow_back"].click()
     assert fake_ui.navigate.destinations[-1] == "/"

@@ -21,6 +21,9 @@ class _FakeContext:
     def classes(self, _: str) -> _FakeContext:
         return self
 
+    def props(self, _: str) -> _FakeContext:
+        return self
+
 
 class _FakeButton(_FakeContext):
     """Fake button capturing disable props."""
@@ -52,6 +55,9 @@ class _FakeUI:
     def column(self) -> _FakeContext:
         return _FakeContext()
 
+    def header(self) -> _FakeContext:
+        return _FakeContext()
+
     def card(self) -> _FakeContext:
         return _FakeContext()
 
@@ -67,9 +73,15 @@ class _FakeUI:
     def separator(self) -> _FakeContext:
         return _FakeContext()
 
-    def button(self, label: str, on_click: object | None = None) -> _FakeButton:
+    def button(
+        self,
+        label: str | None = None,
+        on_click: object | None = None,
+        icon: str | None = None,
+    ) -> _FakeButton:
+        rendered_label = label if label is not None else icon or ""
         _ = on_click
-        button = _FakeButton(label)
+        button = _FakeButton(rendered_label)
         self.buttons.append(button)
         return button
 

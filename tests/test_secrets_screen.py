@@ -21,6 +21,9 @@ class _FakeContext:
     def classes(self, _: str) -> _FakeContext:
         return self
 
+    def props(self, _: str) -> _FakeContext:
+        return self
+
 
 class _FakeInput(_FakeContext):
     """Fake input control with value and placeholder support."""
@@ -69,10 +72,16 @@ class _FakeUI:
     def column(self) -> _FakeContext:
         return _FakeContext()
 
+    def header(self) -> _FakeContext:
+        return _FakeContext()
+
     def card(self) -> _FakeContext:
         return _FakeContext()
 
     def row(self) -> _FakeContext:
+        return _FakeContext()
+
+    def separator(self) -> _FakeContext:
         return _FakeContext()
 
     def label(self, text: str) -> _FakeContext:
@@ -93,11 +102,16 @@ class _FakeUI:
         return control
 
     def button(
-        self, label: str, on_click: object | None = None, color: str | None = None
+        self,
+        label: str | None = None,
+        on_click: object | None = None,
+        color: str | None = None,
+        icon: str | None = None,
     ) -> _FakeButton:
         _ = color
-        button = _FakeButton(label, on_click=on_click)
-        self.buttons[label] = button
+        rendered_label = label if label is not None else icon or ""
+        button = _FakeButton(rendered_label, on_click=on_click)
+        self.buttons[rendered_label] = button
         return button
 
     def notify(self, message: str, type: str | None = None) -> None:

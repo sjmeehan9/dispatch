@@ -8,6 +8,7 @@ from nicegui import ui
 from pydantic import ValidationError
 
 from app.src.models import ActionTypeDefaults
+from app.src.ui.components import page_layout
 from app.src.ui.state import AppState
 
 _ACTION_TYPES: tuple[str, ...] = ("implement", "test", "review", "document", "debug")
@@ -72,6 +73,7 @@ def render_action_type_defaults(app_state: AppState) -> None:
         action_type: {} for action_type in _ACTION_TYPES
     }
 
+    page_layout("Action Type Defaults", back_url="/", ui_module=ui)
     with ui.column().classes(
         "items-center mx-auto justify-center q-pa-xl q-gutter-md w-full max-w-4xl"
     ):
@@ -149,7 +151,4 @@ def render_action_type_defaults(app_state: AppState) -> None:
                 ui.notify("Action type defaults saved", type="positive")
 
             with ui.row().classes("w-full justify-end q-gutter-sm q-mt-md"):
-                ui.button("Back to Home", on_click=lambda: ui.navigate.to("/")).props(
-                    "outline"
-                )
                 ui.button("Save", on_click=_save_defaults, color="primary")

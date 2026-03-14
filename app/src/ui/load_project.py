@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from nicegui import ui
+from nicegui import run, ui
 
 from app.src.services.project_service import ProjectNotFoundError, ProjectService
+from app.src.ui.components import loading_overlay, page_layout, with_loading
 from app.src.ui.state import AppState
 
 
@@ -25,10 +26,15 @@ def _project_service_for_saved_projects(app_state: AppState) -> ProjectService:
 def render_load_project(app_state: AppState) -> None:
     """Render the saved-project load screen."""
     project_service = _project_service_for_saved_projects(app_state)
+    page_layout("Load Project", back_url="/", ui_module=ui)
+    load_overlay = loading_overlay("Loading project...", ui_module=ui)
 
-    def _load_project(project_id: str) -> None:
+    async def _load_project(project_id: str) -> None:
         try:
-            project = project_service.load_project(project_id)
+            project = await with_loading(
+                lambda: run.io_bound(project_service.load_project, project_id),
+                load_overlay,
+            )
         except ProjectNotFoundError as exc:
             ui.notify(str(exc), type="negative")
             _project_list.refresh()
@@ -123,8 +129,3 @@ def render_load_project(app_state: AppState) -> None:
                                 ).props("flat round")
 
             _project_list()
-
-            with ui.row().classes("w-full justify-end q-mt-md"):
-                ui.button("Back to Home", on_click=lambda: ui.navigate.to("/")).props(
-                    "outline"
-                )

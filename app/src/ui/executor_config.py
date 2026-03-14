@@ -10,6 +10,7 @@ from pydantic import ValidationError
 
 from app.src.config import EXECUTOR_CONFIG_FILENAME
 from app.src.models import ExecutorConfig
+from app.src.ui.components import page_layout
 from app.src.ui.state import AppState
 
 _URL_VALIDATION_MESSAGE = "URL must start with http:// or https://"
@@ -51,6 +52,7 @@ def render_executor_config(app_state: AppState) -> None:
     if config_path.exists():
         existing = app_state.config_manager.get_executor_config()
 
+    page_layout("Configure Executor", back_url="/", ui_module=ui)
     with ui.column().classes(
         "items-center mx-auto justify-center q-pa-xl q-gutter-md w-full max-w-xl"
     ):
@@ -136,7 +138,4 @@ def render_executor_config(app_state: AppState) -> None:
                 ui.notify("Executor configuration saved", type="positive")
 
             with ui.row().classes("w-full justify-end q-gutter-sm q-mt-md"):
-                ui.button("Back to Home", on_click=lambda: ui.navigate.to("/")).props(
-                    "outline"
-                )
                 ui.button("Save", on_click=_save_config, color="primary")

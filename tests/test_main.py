@@ -101,7 +101,7 @@ def test_load_project_route_renders_screen(main_module: ModuleType) -> None:
 
     assert response.status_code == 200
     assert "Load Project" in response.text
-    assert "Back to Home" in response.text
+    assert "Dispatch" in response.text
 
 
 def test_webhook_callback_stores_payload(main_module: ModuleType) -> None:

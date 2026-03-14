@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from nicegui import ui
 
+from app.src.ui.components import page_layout
 from app.src.ui.state import AppState
 
 
@@ -30,6 +31,7 @@ def _project_button(label: str, destination: str, enabled: bool) -> None:
 
 def render_initial_screen(app_state: AppState) -> None:
     """Render the initial navigation screen and configuration status."""
+    page_layout("Home", ui_module=ui)
     with ui.column().classes(
         "items-center mx-auto justify-center q-pa-xl q-gutter-md w-full max-w-md"
     ):

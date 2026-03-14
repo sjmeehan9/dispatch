@@ -71,6 +71,9 @@ class _FakeUI:
     def column(self) -> _FakeContext:
         return _FakeContext()
 
+    def header(self) -> _FakeContext:
+        return _FakeContext()
+
     def card(self) -> _FakeContext:
         return _FakeContext()
 
@@ -80,9 +83,15 @@ class _FakeUI:
     def dialog(self) -> _FakeDialog:
         return _FakeDialog()
 
+    def separator(self) -> _FakeContext:
+        return _FakeContext()
+
     def label(self, text: str) -> _FakeLabel:
         self.labels.append(text)
         return _FakeLabel(text)
+
+    def spinner(self, *_args: object, **_kwargs: object) -> _FakeContext:
+        return _FakeContext()
 
     def notify(self, _: str, type: str = "info") -> None:
         _ = type
@@ -143,7 +152,6 @@ def test_render_load_project_with_empty_list(monkeypatch: pytest.MonkeyPatch) ->
     assert "Load Project" in fake_ui.labels
     assert "No saved projects. Link a new project to get started." in fake_ui.labels
     assert "Link New Project" in fake_ui.buttons
-    assert "Back to Home" in fake_ui.buttons
 
 
 def test_render_load_project_with_multiple_projects(

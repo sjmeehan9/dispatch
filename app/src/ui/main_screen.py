@@ -10,7 +10,13 @@ from typing import Callable
 from nicegui import run, ui
 
 from app.src.models import Action, ActionStatus, ActionType, ExecutorResponse, Project
-from app.src.services.project_service import ProjectNotFoundError, ProjectService
+from app.src.services.project_service import ProjectService
+from app.src.ui.components import (
+    LoadingOverlay,
+    loading_overlay,
+    page_layout,
+    with_loading,
+)
 from app.src.ui.state import AppState
 
 _ACTION_ICON_MAP: dict[str, str] = {
@@ -344,6 +350,7 @@ async def _dispatch_action(
 def _render_action_list(
     app_state: AppState,
     project_service: ProjectService,
+    dispatch_overlay: LoadingOverlay,
     refresh_response_panel: Callable[[], None] | None = None,
 ) -> None:
     """Render the left-panel phase-grouped action list."""
@@ -356,8 +363,8 @@ def _render_action_list(
         ui.label("No actions generated yet.").classes("text-grey-7")
         return
 
-    dispatching_action_id = getattr(app_state, "dispatching_action_id", None)
-    completing_action_id = getattr(app_state, "completing_action_id", None)
+    dispatching_action_id = app_state.dispatching_action_id
+    completing_action_id = app_state.completing_action_id
 
     with ui.column().classes("w-full q-gutter-sm"):
         for phase_id, phase_name, actions in grouped_actions:
@@ -443,7 +450,10 @@ def _render_action_list(
     async def _handle_dispatch(action: Action) -> None:
         app_state.dispatching_action_id = action.action_id
         _render_action_list.refresh()
-        await _dispatch_action(app_state, project_service, action)
+        await with_loading(
+            lambda: _dispatch_action(app_state, project_service, action),
+            dispatch_overlay,
+        )
         app_state.dispatching_action_id = None
         _render_action_list.refresh()
         if refresh_response_panel is not None:
@@ -640,34 +650,39 @@ def _render_response_panel(
 
 def render_main_screen(app_state: AppState, project_id: str) -> None:
     """Render the main dispatch workspace for a linked project."""
-    project_service = _project_service_for_main_screen(app_state)
-
-    if (
-        app_state.current_project is None
-        or app_state.current_project.project_id != project_id
-    ):
-        try:
-            app_state.current_project = project_service.load_project(project_id)
-        except ProjectNotFoundError as exc:
-            ui.notify(str(exc), type="negative")
-            ui.navigate.to("/")
-            return
-        except OSError as exc:
-            ui.notify(f"Unable to load project: {exc}", type="negative")
-            ui.navigate.to("/")
-            return
-
-    if app_state.current_project is None:
-        ui.notify("No project loaded.", type="negative")
+    project = app_state.ensure_project(project_id)
+    if project is None:
+        ui.notify("Project not found. Redirected to home.", type="negative")
         ui.navigate.to("/")
         return
 
-    def _save_project() -> None:
+    project_service = _project_service_for_main_screen(app_state)
+
+    save_overlay = loading_overlay("Saving project...", ui_module=ui)
+    dispatch_overlay = loading_overlay("Dispatching action...", ui_module=ui)
+
+    def _go_home() -> None:
+        app_state.clear_project()
+        ui.navigate.to("/")
+
+    page_layout(
+        f"Project: {project.project_name}",
+        back_url="/",
+        ui_module=ui,
+        on_back=_go_home,
+    )
+
+    async def _save_project() -> None:
         if app_state.current_project is None:
             ui.notify("No project loaded.", type="negative")
             return
         try:
-            project_service.save_project(app_state.current_project)
+            await with_loading(
+                lambda: run.io_bound(
+                    project_service.save_project, app_state.current_project
+                ),
+                save_overlay,
+            )
         except OSError as exc:
             ui.notify(f"Unable to save project: {exc}", type="negative")
             return
@@ -678,9 +693,6 @@ def render_main_screen(app_state: AppState, project_id: str) -> None:
             ui.label(app_state.current_project.project_name).classes("text-h4")
             with ui.row().classes("items-center q-gutter-sm"):
                 ui.button("Save", icon="save", on_click=_save_project)
-                ui.button(
-                    "Home", icon="home", on_click=lambda: ui.navigate.to("/")
-                ).props("outline")
 
         with (
             ui.splitter(value=40)
@@ -692,6 +704,7 @@ def render_main_screen(app_state: AppState, project_id: str) -> None:
                     _render_action_list(
                         app_state,
                         project_service,
+                        dispatch_overlay,
                         refresh_response_panel=_render_response_panel.refresh,
                     )
 
