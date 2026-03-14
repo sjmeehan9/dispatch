@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-import re
 from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-_REPOSITORY_PATTERN = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
+from app.src.config.constants import REPOSITORY_PATTERN
 
 
 class ActionType(StrEnum):
@@ -88,7 +87,7 @@ class Project(BaseModel):
     def validate_repository(self) -> Project:
         """Validate repository format as owner/repo."""
 
-        if not _REPOSITORY_PATTERN.match(self.repository):
+        if not REPOSITORY_PATTERN.match(self.repository):
             raise ValueError(
                 "repository must match the owner/repo format (for example, 'org/repo')."
             )

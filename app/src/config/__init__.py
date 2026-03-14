@@ -14,6 +14,7 @@ from app.src.config.constants import (
     GITHUB_AGENTS_PATH,
     PHASE_PROGRESS_PATH,
     PROJECTS_DIR_NAME,
+    REPOSITORY_PATTERN,
 )
 from app.src.config.settings import Settings, get_settings
 
@@ -29,6 +30,7 @@ __all__ = [
     "GITHUB_AGENTS_PATH",
     "PHASE_PROGRESS_PATH",
     "PROJECTS_DIR_NAME",
+    "REPOSITORY_PATTERN",
     "Settings",
     "get_settings",
 ]

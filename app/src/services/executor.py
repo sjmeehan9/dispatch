@@ -10,7 +10,7 @@ import httpx
 from app.src.config.settings import Settings
 from app.src.models import ExecutorConfig, ExecutorResponse
 
-logger = logging.getLogger(__name__)
+_LOGGER = logging.getLogger(__name__)
 
 
 @runtime_checkable
@@ -30,44 +30,44 @@ class AutopilotExecutor:
 
     def __init__(self, settings: Settings) -> None:
         """Initialise the executor with runtime settings access."""
-        self.settings = settings
+        self._settings = settings
 
     def dispatch(
         self, payload: dict[str, Any], config: ExecutorConfig
     ) -> ExecutorResponse:
         """Send the payload to Autopilot and normalize the response."""
-        api_key = self.settings.get_secret(config.api_key_env_key)
+        api_key = self._settings.get_secret(config.api_key_env_key)
         if not api_key:
             message = (
                 "API key not configured. "
                 f"Set {config.api_key_env_key} in your environment."
             )
-            logger.warning(message)
+            _LOGGER.warning(message)
             return ExecutorResponse(status_code=0, message=message, run_id=None)
 
         headers = {"X-API-Key": api_key, "Content-Type": "application/json"}
         endpoint = str(config.api_endpoint)
-        logger.info("Dispatching to %s", endpoint)
+        _LOGGER.info("Dispatching to %s", endpoint)
 
         try:
             with httpx.Client(timeout=self._REQUEST_TIMEOUT_SECONDS) as client:
                 response = client.post(endpoint, json=payload, headers=headers)
         except httpx.ConnectError:
             message = f"Connection failed: could not reach {endpoint}"
-            logger.warning(message)
+            _LOGGER.warning(message)
             return ExecutorResponse(status_code=0, message=message, run_id=None)
         except httpx.TimeoutException:
             message = (
                 f"Request timed out after {int(self._REQUEST_TIMEOUT_SECONDS)} seconds"
             )
-            logger.warning(message)
+            _LOGGER.warning(message)
             return ExecutorResponse(status_code=0, message=message, run_id=None)
         except httpx.HTTPError as exc:
             message = f"HTTP error: {exc}"
-            logger.warning(message)
+            _LOGGER.warning(message)
             return ExecutorResponse(status_code=0, message=message, run_id=None)
 
-        logger.info("Executor response: %s", response.status_code)
+        _LOGGER.info("Executor response: %s", response.status_code)
 
         if response.is_success:
             response_json = self._safe_json_dict(response)

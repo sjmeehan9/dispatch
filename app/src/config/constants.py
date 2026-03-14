@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 DEFAULT_DATA_DIR = "~/.dispatch/"
 PROJECTS_DIR_NAME = "projects"
 CONFIG_DIR_NAME = "config"
@@ -14,3 +16,5 @@ ENV_DIR_NAME = ".env"
 PHASE_PROGRESS_PATH = "docs/phase-progress.json"
 CLAUDE_AGENTS_PATH = ".claude/agents/"
 GITHUB_AGENTS_PATH = ".github/agents/"
+
+REPOSITORY_PATTERN = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")

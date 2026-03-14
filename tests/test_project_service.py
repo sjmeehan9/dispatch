@@ -308,6 +308,34 @@ def test_load_project_raises_for_missing_project(
         service.load_project("missing")
 
 
+def test_load_project_raises_for_corrupted_json(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    settings = _build_settings(monkeypatch, tmp_path)
+    settings.projects_dir.mkdir(parents=True, exist_ok=True)
+    (settings.projects_dir / "corrupted.json").write_text(
+        "{not-valid-json", encoding="utf-8"
+    )
+    service = ProjectService(settings=settings, github_client=_FakeGitHubClient())
+
+    with pytest.raises(ProjectNotFoundError, match="invalid JSON"):
+        service.load_project("corrupted")
+
+
+def test_load_project_raises_for_invalid_project_data(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    settings = _build_settings(monkeypatch, tmp_path)
+    settings.projects_dir.mkdir(parents=True, exist_ok=True)
+    (settings.projects_dir / "invalid.json").write_text(
+        json.dumps({"project_id": "invalid", "missing_fields": True}), encoding="utf-8"
+    )
+    service = ProjectService(settings=settings, github_client=_FakeGitHubClient())
+
+    with pytest.raises(ProjectNotFoundError, match="invalid data"):
+        service.load_project("invalid")
+
+
 def test_list_projects_returns_sorted_summaries(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
