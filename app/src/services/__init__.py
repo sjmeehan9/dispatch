@@ -9,6 +9,7 @@ from app.src.services.github_client import (
     GitHubFileEntry,
     GitHubNotFoundError,
 )
+from app.src.services.payload_resolver import PayloadResolver
 from app.src.services.project_service import (
     ProjectLinkError,
     ProjectNotFoundError,
@@ -24,6 +25,7 @@ __all__ = [
     "GitHubClientError",
     "GitHubFileEntry",
     "GitHubNotFoundError",
+    "PayloadResolver",
     "ProjectLinkError",
     "ProjectNotFoundError",
     "ProjectService",
