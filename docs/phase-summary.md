@@ -49,3 +49,59 @@ Phase 1 is infrastructure-only — no application logic was implemented. The pac
 ## Phase Readiness
 
 All four components were delivered and documented. CI pipeline is configured and runs Black, isort, pytest, and evals on push/PR to `main`. The repository is installable via `pip install -e .` and ready for Phase 2 application code.
+
+---
+
+## Phase 2 Overview
+
+Phase 2 delivered the complete data foundation for Dispatch — all Pydantic v2 data models, application settings with environment loading, a config and secrets manager service, and default Autopilot executor configuration. This layer underpins every subsequent service and UI component.
+
+## Components Delivered
+
+### Component 2.1 — Core Data Models
+- **What was built:** Pydantic v2 models for project state (`Project`, `PhaseData`, `ComponentData`, `Action`), executor integration (`ExecutorConfig`, `ExecutorResponse`, `ActionTypeDefaults`), and payload handling (`PayloadTemplate`, `ResolvedPayload`). Includes `ActionType` and `ActionStatus` enums covering all five action types and lifecycle states.
+- **Key files:** `app/src/models/project.py`, `app/src/models/executor.py`, `app/src/models/payload.py`, `app/src/models/__init__.py`
+- **Design decisions:** Used Pydantic v2 `BaseModel` uniformly for validation and serialisation. Added alias support for `phase-progress.json` camelCase keys while exposing snake_case internally. Secret env key *names* stored in models rather than secret values.
+
+### Component 2.2 — Application Settings Module
+- **What was built:** `Settings` class loading environment values via `python-dotenv` from `.env/.env.local`, with typed directory properties (`data_dir`, `projects_dir`, `config_dir`), `initialise_data_dir()` for first-run directory creation, and secure `get_secret()` with `GITHUB_TOKEN`/`TOKEN` aliasing for CI compatibility. Lazy singleton via `get_settings()`.
+- **Key files:** `app/src/config/settings.py`, `app/src/config/constants.py`, `app/src/config/__init__.py`
+- **Design decisions:** `.env/.env.local` treated as optional at runtime to preserve CI compatibility. Token aliasing centralised in `Settings` rather than duplicated across services.
+
+### Component 2.3 — Config & Secrets Manager Service
+- **What was built:** `ConfigManager` service for persisting and retrieving `ExecutorConfig` and `ActionTypeDefaults` as JSON under `~/.dispatch/config/`, with atomic write semantics (`.tmp` then replace). Default bootstrap from `app/config/defaults.yaml` on first run. Secrets read/write via `python-dotenv` `set_key()` against `.env/.env.local`.
+- **Key files:** `app/src/services/config_manager.py`
+- **Design decisions:** Atomic JSON writes reduce sync corruption risk. Model validation (`model_validate`) applied at all load boundaries to fail fast on malformed data.
+
+### Component 2.4 — Default Executor Configuration
+- **What was built:** Bundled `defaults.yaml` with Autopilot executor defaults and all five action-type payload templates (`implement`, `test`, `review`, `document`, `debug`). Templates use standardised placeholders (`{{repository}}`, `{{branch}}`, `{{agent_paths}}`, `{{webhook_url}}`). Role mapping aligned to Autopilot values.
+- **Key files:** `app/config/defaults.yaml`
+- **Design decisions:** Backward compatibility in `_load_defaults()` for legacy `executor_config` key. `{{agent_paths}}` kept as placeholder for resolver injection.
+
+### Component 2.5 — Unit Tests, Validation & Phase Documentation
+- **What was built:** Expanded test coverage across `tests/test_models.py`, `tests/test_settings.py`, and `tests/test_config_manager.py` covering model integrity, settings behaviour, config/secrets persistence, and default bootstrap flows. Quality gates executed (pytest, Black, isort, evals).
+- **Key files:** `tests/test_models.py`, `tests/test_settings.py`, `tests/test_config_manager.py`, `docs/components/phase-2-component-2-5-overview.md`
+- **Design decisions:** Tests isolated with temporary directories and patched env paths to avoid mutating real `~/.dispatch/` or committed `.env` artifacts.
+
+## Architecture & Integration
+
+Phase 2 established the data and configuration layer that all subsequent phases depend on. The models in `app/src/models/` define the domain vocabulary — projects, phases, components, actions, executor configs, and payloads — consumed by services and UI. `Settings` centralises environment resolution and directory management, while `ConfigManager` provides the persistence interface for executor configuration and secrets. The bundled `app/config/defaults.yaml` ensures a working Autopilot configuration exists on first run without requiring manual setup.
+
+## Deviations from Spec
+
+- Components 2.2 and 2.5: Validation ran with Python 3.12 in the implementation sandbox rather than Python 3.13, as the 3.13 runtime was unavailable. All checks passed; CI remains configured for Python 3.13.
+
+## Dependencies & Configuration
+
+- **No new runtime dependencies** added beyond those declared in Phase 1 (`pydantic`, `python-dotenv`, `pyyaml` already in `pyproject.toml`).
+- **New config files:** `app/src/config/constants.py` (data directory defaults, config filenames, env file paths), `app/config/defaults.yaml` (bundled Autopilot executor defaults).
+- **Data directory:** `~/.dispatch/` created by `Settings.initialise_data_dir()` with `config/` and `projects/` subdirectories.
+
+## Known Limitations
+
+- Secret management is local-file-based only (`.env/.env.local`); no integration with external secret managers.
+- `defaults.yaml` webhook URL is empty — users must provide their own callback URL for webhook-based workflows.
+
+## Phase Readiness
+
+All five components were delivered and documented. Tests pass for models, settings, and config manager. Black, isort, and evals checks pass on all Phase 2 code. The data foundation is ready for Phase 3 service implementation.
