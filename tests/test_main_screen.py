@@ -207,6 +207,7 @@ def test_dispatch_action_resolves_payload_dispatches_and_updates_status(
     assert executor_calls[0][0] == {"repository": "owner/repo"}
     assert action.payload == {"repository": "owner/repo"}
     assert action.status == ActionStatus.DISPATCHED
+    assert app_state.last_dispatched_action is action
     assert action.executor_response == {
         "status_code": 200,
         "message": "queued",
@@ -283,5 +284,66 @@ def test_dispatch_action_keeps_status_when_executor_returns_failure(
         "message": "Connection failed",
         "run_id": None,
     }
+    assert app_state.last_dispatched_action is action
     assert project_service.saved_projects == [project]
     assert ("Dispatch failed: Connection failed", "negative") in fake_ui.notifications
+
+
+def test_poll_webhook_returns_stored_payload() -> None:
+    """Webhook polling helper should return stored payload data when available."""
+    payload = {"status": "completed", "result": "ok"}
+    app_state = SimpleNamespace(
+        webhook_service=SimpleNamespace(
+            retrieve=lambda run_id: payload if run_id == "run-1" else None
+        )
+    )
+
+    result = main_screen._poll_webhook(app_state, "run-1")
+
+    assert result == payload
+
+
+def test_poll_webhook_returns_none_when_missing() -> None:
+    """Webhook polling helper should return None when no payload exists."""
+    app_state = SimpleNamespace(
+        webhook_service=SimpleNamespace(retrieve=lambda run_id: None)
+    )
+
+    result = main_screen._poll_webhook(app_state, "missing-run")
+
+    assert result is None
+
+
+def test_mark_complete_sets_completed_status_and_tracks_action() -> None:
+    """Mark complete helper should update status and current response selection."""
+    action = _sample_project().actions[0]
+    app_state = SimpleNamespace(last_dispatched_action=None)
+
+    main_screen._mark_complete(app_state, action)
+
+    assert action.status == ActionStatus.COMPLETED
+    assert app_state.last_dispatched_action is action
+
+
+def test_extract_run_id_from_executor_response() -> None:
+    """Run id extraction should return the run identifier when present."""
+    action = _sample_project().actions[0]
+    action.executor_response = {
+        "status_code": 200,
+        "message": "queued",
+        "run_id": "run-22",
+    }
+
+    run_id = main_screen._extract_run_id(action)
+
+    assert run_id == "run-22"
+
+
+def test_extract_run_id_returns_none_without_valid_identifier() -> None:
+    """Run id extraction should gracefully return None for missing/blank values."""
+    action = _sample_project().actions[0]
+    action.executor_response = {"status_code": 200, "message": "queued", "run_id": " "}
+
+    run_id = main_screen._extract_run_id(action)
+
+    assert run_id is None

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from typing import Callable
 
 from nicegui import run, ui
 
@@ -70,6 +71,41 @@ def _status_color(action: Action) -> str:
     return _STATUS_COLOR_MAP.get(str(action.status), "grey")
 
 
+def _response_color_class(status_code: int) -> str:
+    """Map an executor status code to a semantic text color class."""
+    if status_code == 0:
+        return "text-warning"
+    if 200 <= status_code < 300:
+        return "text-positive"
+    if status_code >= 400:
+        return "text-negative"
+    return "text-grey-7"
+
+
+def _poll_webhook(app_state: AppState, run_id: str) -> dict[str, object] | None:
+    """Return stored webhook data for a run identifier, if available."""
+    data = app_state.webhook_service.retrieve(run_id)
+    if data is None:
+        return None
+    return dict(data)
+
+
+def _mark_complete(app_state: AppState, action: Action) -> None:
+    """Mark an action as completed and keep it selected in the response panel."""
+    action.status = ActionStatus.COMPLETED
+    app_state.last_dispatched_action = action
+
+
+def _extract_run_id(action: Action) -> str | None:
+    """Extract the run identifier from an action's executor response payload."""
+    if action.executor_response is None:
+        return None
+    run_id = action.executor_response.get("run_id")
+    if isinstance(run_id, str) and run_id.strip():
+        return run_id
+    return None
+
+
 def _group_actions_by_phase(
     project: Project,
 ) -> list[tuple[int, str, list[Action]]]:
@@ -123,6 +159,7 @@ async def _dispatch_action(
 
     action.payload = resolved_payload.payload
     action.executor_response = response.model_dump()
+    app_state.last_dispatched_action = action
 
     dispatch_succeeded = 200 <= response.status_code < 300
     if dispatch_succeeded:
@@ -142,7 +179,11 @@ async def _dispatch_action(
 
 
 @ui.refreshable
-def _render_action_list(app_state: AppState, project_service: ProjectService) -> None:
+def _render_action_list(
+    app_state: AppState,
+    project_service: ProjectService,
+    refresh_response_panel: Callable[[], None] | None = None,
+) -> None:
     """Render the left-panel phase-grouped action list."""
     if app_state.current_project is None:
         ui.label("No project loaded.").classes("text-negative")
@@ -154,6 +195,7 @@ def _render_action_list(app_state: AppState, project_service: ProjectService) ->
         return
 
     dispatching_action_id = getattr(app_state, "dispatching_action_id", None)
+    completing_action_id = getattr(app_state, "completing_action_id", None)
 
     with ui.column().classes("w-full q-gutter-sm"):
         for phase_id, phase_name, actions in grouped_actions:
@@ -195,12 +237,165 @@ def _render_action_list(app_state: AppState, project_service: ProjectService) ->
                                 if dispatching_action_id == action.action_id:
                                     dispatch_button.props("loading")
 
+                                complete_button = ui.button(
+                                    "Mark Complete",
+                                    icon="check_circle",
+                                    on_click=lambda current_action=action: _handle_mark_complete(
+                                        current_action
+                                    ),
+                                    color="positive",
+                                ).props("dense outline")
+                                if action.status == ActionStatus.COMPLETED:
+                                    complete_button.props("disable")
+                                if completing_action_id == action.action_id:
+                                    complete_button.props("loading")
+
     async def _handle_dispatch(action: Action) -> None:
         app_state.dispatching_action_id = action.action_id
         _render_action_list.refresh()
         await _dispatch_action(app_state, project_service, action)
         app_state.dispatching_action_id = None
         _render_action_list.refresh()
+        if refresh_response_panel is not None:
+            refresh_response_panel()
+
+    async def _handle_mark_complete(action: Action) -> None:
+        app_state.completing_action_id = action.action_id
+        _mark_complete(app_state, action)
+
+        if app_state.current_project is not None:
+            try:
+                await run.io_bound(
+                    project_service.save_project, app_state.current_project
+                )
+            except OSError as exc:
+                ui.notify(f"Unable to save project: {exc}", type="negative")
+            else:
+                ui.notify("Action marked complete", type="positive")
+
+        app_state.completing_action_id = None
+        _render_action_list.refresh()
+        if refresh_response_panel is not None:
+            refresh_response_panel()
+
+
+@ui.refreshable
+def _render_response_panel(
+    app_state: AppState,
+    project_service: ProjectService,
+    refresh_action_list: Callable[[], None],
+) -> None:
+    """Render executor/webhook responses for the most recently dispatched action."""
+    current_action: Action | None = getattr(app_state, "last_dispatched_action", None)
+
+    try:
+        executor_config = app_state.config_manager.get_executor_config()
+    except (OSError, ValueError):
+        executor_config = None
+
+    with ui.column().classes("w-full q-gutter-md"):
+        with ui.card().classes("w-full q-pa-md"):
+            ui.label("Executor Response").classes("text-h6")
+            if current_action is None or current_action.executor_response is None:
+                ui.label("No action dispatched yet.").classes("text-grey-7")
+            else:
+                status_code = int(
+                    current_action.executor_response.get("status_code", 0)
+                )
+                message = str(current_action.executor_response.get("message", ""))
+                ui.label(f"Response: {status_code}").classes(
+                    _response_color_class(status_code)
+                )
+                ui.label(f"Message: {message}")
+
+                run_id = _extract_run_id(current_action)
+                if run_id is not None:
+                    ui.label(f"Run ID: {run_id}").classes("text-caption text-grey-7")
+
+        has_webhook_url = (
+            executor_config is not None and executor_config.webhook_url is not None
+        )
+        if has_webhook_url:
+            with ui.card().classes("w-full q-pa-md"):
+                ui.label("Webhook Response").classes("text-h6")
+
+                if current_action is None or current_action.executor_response is None:
+                    ui.label("No action dispatched yet.").classes("text-grey-7")
+                else:
+                    run_id = _extract_run_id(current_action)
+                    if run_id is None:
+                        ui.label("No run ID; webhook polling unavailable.").classes(
+                            "text-warning"
+                        )
+                    elif current_action.webhook_response is None:
+                        ui.label("Waiting for webhook response...").classes(
+                            "text-grey-7"
+                        )
+
+                        async def _refresh_webhook() -> None:
+                            webhook_payload = _poll_webhook(app_state, run_id)
+                            if webhook_payload is None:
+                                ui.notify(
+                                    "Webhook response not available yet.",
+                                    type="warning",
+                                )
+                                _render_response_panel.refresh()
+                                return
+
+                            current_action.webhook_response = webhook_payload
+                            if app_state.current_project is not None:
+                                try:
+                                    await run.io_bound(
+                                        project_service.save_project,
+                                        app_state.current_project,
+                                    )
+                                except OSError as exc:
+                                    ui.notify(
+                                        f"Webhook received but save failed: {exc}",
+                                        type="warning",
+                                    )
+
+                            _render_response_panel.refresh()
+
+                        ui.button(
+                            "Refresh",
+                            icon="refresh",
+                            on_click=_refresh_webhook,
+                            color="secondary",
+                        )
+                    else:
+                        webhook_status = current_action.webhook_response.get(
+                            "status_code"
+                        ) or current_action.webhook_response.get("status")
+                        webhook_message = current_action.webhook_response.get(
+                            "message"
+                        ) or current_action.webhook_response.get("result")
+                        ui.label(f"Status: {webhook_status}")
+                        ui.label(f"Message: {webhook_message}")
+
+        if current_action is not None:
+
+            async def _mark_current_action_complete() -> None:
+                _mark_complete(app_state, current_action)
+                if app_state.current_project is not None:
+                    try:
+                        await run.io_bound(
+                            project_service.save_project, app_state.current_project
+                        )
+                    except OSError as exc:
+                        ui.notify(f"Unable to save project: {exc}", type="negative")
+                        return
+
+                ui.notify("Action marked complete", type="positive")
+                refresh_action_list()
+                _render_response_panel.refresh()
+
+            ui.button(
+                "Mark Complete",
+                icon="check_circle",
+                color="positive",
+                on_click=_mark_current_action_complete,
+            ).props("outline")
 
 
 def render_main_screen(app_state: AppState, project_id: str) -> None:
@@ -254,10 +449,16 @@ def render_main_screen(app_state: AppState, project_id: str) -> None:
         ):
             with splitter.before:
                 with ui.scroll_area().classes("w-full h-full q-pr-sm"):
-                    _render_action_list(app_state, project_service)
+                    _render_action_list(
+                        app_state,
+                        project_service,
+                        refresh_response_panel=_render_response_panel.refresh,
+                    )
 
             with splitter.after:
-                with ui.card().classes("w-full h-full q-pa-md"):
-                    ui.label(
-                        "Response panel will be available in Component 4.8"
-                    ).classes("text-grey-7")
+                with ui.scroll_area().classes("w-full h-full q-pl-sm"):
+                    _render_response_panel(
+                        app_state,
+                        project_service,
+                        refresh_action_list=_render_action_list.refresh,
+                    )

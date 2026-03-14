@@ -229,3 +229,36 @@
 
 ### Deviations
 - None.
+
+## Component 4.8 - Main Screen Response Display & Controls
+- Extended `app/src/ui/main_screen.py` to implement the full right-panel response experience for the main workspace.
+- Added refreshable response rendering via `_render_response_panel(app_state, project_service, refresh_action_list)` with:
+  - Executor response card (status, message, run ID)
+  - Empty-state text when no action has been dispatched yet
+  - Status color mapping for successful, failed, and connection-error responses
+- Added conditional webhook section rendering based on configured webhook URL in executor config.
+- Implemented manual webhook polling flow:
+  - Added `_poll_webhook(app_state, run_id)` helper (reads from `WebhookService`)
+  - Added `Refresh` button when run ID exists and webhook payload is pending
+  - Stores retrieved webhook payload on the currently displayed action and persists project updates
+- Added completion controls:
+  - Added `Mark Complete` button on each action row in the left panel
+  - Added `Mark Complete` button for the current action in the right panel
+  - Added `_mark_complete(app_state, action)` helper to set `completed` status and keep response context in sync
+  - Persists status updates and refreshes both panels after completion
+- Updated dispatch flow:
+  - `_dispatch_action(...)` now records `app_state.last_dispatched_action`
+  - Response panel refreshes after dispatch to show latest executor response without page reload
+- Added helper `_extract_run_id(action)` to centralize safe run ID parsing from executor response payloads.
+- Expanded tests in `tests/test_main_screen.py` for:
+  - Tracking of latest dispatched action
+  - Webhook poll helper behavior (present/missing)
+  - Completion helper behavior
+  - Run ID extraction behavior
+
+### Decisions
+- Kept webhook retrieval manual (button-triggered polling) to match scope and avoid background task complexity.
+- Reused existing project persistence paths so response/completion updates are durable across reloads.
+
+### Deviations
+- None.
