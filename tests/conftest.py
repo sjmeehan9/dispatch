@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -14,7 +15,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         "--autopilot-confirm",
         action="store_true",
         default=False,
-        help="Run tests marked with requires_autopilot against a live external executor.",
+        help="Run live Autopilot executor tests (requires running Autopilot service)",
     )
 
 
@@ -27,11 +28,46 @@ def pytest_collection_modifyitems(
         return
 
     skip_marker = pytest.mark.skip(
-        reason="requires --autopilot-confirm to run live Autopilot integration tests",
+        reason="Need --autopilot-confirm to run live executor tests",
     )
     for item in items:
         if item.get_closest_marker("requires_autopilot"):
             item.add_marker(skip_marker)
+
+
+@pytest.fixture(scope="session")
+def confirm_autopilot_gateway(request: pytest.FixtureRequest) -> dict[str, str]:
+    """Confirm live Autopilot connectivity details for human-gated tests.
+
+    Returns:
+        Dictionary containing the API endpoint and API key.
+
+    Raises:
+        pytest.SkipTest: If confirmation is not provided or configuration is missing.
+    """
+
+    if not request.config.getoption("--autopilot-confirm"):
+        pytest.skip("Need --autopilot-confirm to run live executor tests")
+
+    api_endpoint = os.environ.get("AUTOPILOT_API_ENDPOINT", "").strip()
+    api_key = os.environ.get("AUTOPILOT_API_KEY", "").strip()
+
+    if not api_endpoint or not api_key:
+        pytest.skip(
+            "AUTOPILOT_API_ENDPOINT and AUTOPILOT_API_KEY must be set for live tests"
+        )
+
+    try:
+        confirmed = input(
+            f"Is the Autopilot executor running at {api_endpoint}? [y/N]: "
+        )
+    except EOFError:
+        pytest.skip("Interactive confirmation unavailable (likely CI environment)")
+
+    if confirmed.strip().lower() not in {"y", "yes"}:
+        pytest.skip("Live Autopilot test declined by user")
+
+    return {"api_endpoint": api_endpoint, "api_key": api_key}
 
 
 @pytest.fixture(scope="session")
