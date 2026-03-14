@@ -98,6 +98,38 @@
 ### Deviations
 - None.
 
+## Component 4.9 - Debug Action Insertion & Payload Editing
+- Extended `app/src/ui/main_screen.py` with debug insertion and payload editing workflows.
+- Added new helper functions:
+  - `_insert_debug_action(app_state, phase_id, position)`
+  - `_show_insert_debug_dialog(app_state, phase_id, phase_action_count, ...)`
+  - `_show_payload_editor(app_state, project_service, action, ...)`
+  - `_save_edited_payload(action, new_payload_json)`
+  - `_find_unresolved_variables(payload_json)`
+- Added an **Add Debug** control to each phase group in the action list.
+- Implemented insertion-position dialog with bounded input (`0..N`) per phase.
+- Wired debug insertion to `ActionGenerator.insert_debug_action(...)` and immediate project persistence.
+- Added best-effort payload resolution for newly inserted debug actions via `PayloadResolver`.
+- Added an **Edit Payload** action control on each action row.
+- Implemented payload editor dialog with:
+  - JSON textarea pre-populated from current action payload
+  - Save/Cancel actions
+  - strict JSON-object validation before save
+  - unresolved placeholder detection (`{{variable}}`) displayed as warning labels
+- Saving a payload now updates the action payload in memory, persists project state, and refreshes both action/response panels.
+- Added focused tests in `tests/test_main_screen.py` for:
+  - `_save_edited_payload()` invalid JSON rejection
+  - `_save_edited_payload()` valid JSON update
+  - `_insert_debug_action()` insertion position, payload resolution, and persistence
+
+### Decisions
+- Kept payload editing as raw JSON to stay executor-agnostic and support variable payload shapes.
+- Persisted debug insertion and payload edits immediately to avoid losing mid-session changes.
+- Displayed unresolved placeholders as warnings (not hard errors) so users can intentionally keep late-bound template variables.
+
+### Deviations
+- None.
+
 ## Component 4.3 - Executor Configuration Screen
 - Implemented `render_executor_config(app_state)` in `app/src/ui/executor_config.py`.
 - Built a full executor configuration form at `/config/executor` with fields for:

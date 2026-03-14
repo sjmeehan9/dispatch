@@ -9,12 +9,14 @@ from app.src.models import (
     Action,
     ActionStatus,
     ActionType,
+    ActionTypeDefaults,
     ComponentData,
     ExecutorConfig,
     PhaseData,
     Project,
     ResolvedPayload,
 )
+from app.src.services import ActionGenerator, PayloadResolver
 from app.src.ui import main_screen
 
 
@@ -347,3 +349,85 @@ def test_extract_run_id_returns_none_without_valid_identifier() -> None:
     run_id = main_screen._extract_run_id(action)
 
     assert run_id is None
+
+
+def test_save_edited_payload_rejects_invalid_json() -> None:
+    """Payload editor save helper should reject invalid JSON input."""
+    action = _sample_project().actions[0]
+    original_payload = dict(action.payload)
+
+    saved = main_screen._save_edited_payload(action, "{ invalid json")
+
+    assert saved is False
+    assert action.payload == original_payload
+
+
+def test_save_edited_payload_accepts_valid_json_object() -> None:
+    """Payload editor save helper should accept and persist JSON object input."""
+    action = _sample_project().actions[0]
+
+    saved = main_screen._save_edited_payload(
+        action,
+        '{"repository": "owner/repo", "agent_instructions": "Debug this"}',
+    )
+
+    assert saved is True
+    assert action.payload == {
+        "repository": "owner/repo",
+        "agent_instructions": "Debug this",
+    }
+
+
+def test_insert_debug_action_inserts_at_position_and_persists(monkeypatch) -> None:
+    """Debug insertion helper should insert in-phase at requested index and save."""
+    fake_ui = _FakeUI()
+    monkeypatch.setattr(main_screen, "ui", fake_ui)
+
+    project = _sample_project()
+    project_service = _FakeProjectService()
+    monkeypatch.setattr(
+        main_screen,
+        "_project_service_for_main_screen",
+        lambda app_state: project_service,
+    )
+
+    defaults = ActionTypeDefaults(
+        implement={"repository": "{{repository}}"},
+        test={"phase": "{{phase_name}}"},
+        review={"phase": "{{phase_name}}"},
+        document={"phase": "{{phase_name}}"},
+        debug={
+            "repository": "{{repository}}",
+            "agent_instructions": "Debug Phase {{phase_id}}",
+        },
+    )
+    executor_config = ExecutorConfig(
+        executor_id="autopilot",
+        executor_name="Autopilot",
+        api_endpoint="https://executor.example.com/run",
+        api_key_env_key="AUTOPILOT_API_KEY",
+        webhook_url="https://callback.example.com/hook",
+    )
+
+    app_state = SimpleNamespace(
+        current_project=project,
+        config_manager=SimpleNamespace(
+            get_action_type_defaults=lambda: defaults,
+            get_executor_config=lambda: executor_config,
+        ),
+        action_generator=ActionGenerator(),
+        payload_resolver=PayloadResolver(),
+    )
+
+    main_screen._insert_debug_action(app_state, phase_id=1, position=1)
+
+    assert len(project.actions) == 4
+    inserted = project.actions[1]
+    assert inserted.action_type == ActionType.DEBUG
+    assert inserted.phase_id == 1
+    assert inserted.payload == {
+        "repository": "owner/repo",
+        "agent_instructions": "Debug Phase 1",
+    }
+    assert project_service.saved_projects == [project]
+    assert ("Debug action inserted", "positive") in fake_ui.notifications

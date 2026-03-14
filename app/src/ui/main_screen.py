@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+import re
 from collections import defaultdict
 from typing import Callable
 
@@ -24,6 +26,8 @@ _STATUS_COLOR_MAP: dict[str, str] = {
     ActionStatus.DISPATCHED.value: "blue",
     ActionStatus.COMPLETED.value: "green",
 }
+
+_UNRESOLVED_VARIABLE_PATTERN = re.compile(r"\{\{(\w+)\}\}")
 
 
 def _project_service_for_main_screen(app_state: AppState) -> ProjectService:
@@ -104,6 +108,164 @@ def _extract_run_id(action: Action) -> str | None:
     if isinstance(run_id, str) and run_id.strip():
         return run_id
     return None
+
+
+def _find_unresolved_variables(payload_json: str) -> list[str]:
+    """Return unique unresolved variable names referenced as {{variable}}."""
+    matches = _UNRESOLVED_VARIABLE_PATTERN.findall(payload_json)
+    return list(dict.fromkeys(matches))
+
+
+def _save_edited_payload(action: Action, new_payload_json: str) -> bool:
+    """Validate and persist an edited payload JSON string to an action."""
+    try:
+        parsed_payload = json.loads(new_payload_json)
+    except json.JSONDecodeError:
+        return False
+
+    if not isinstance(parsed_payload, dict):
+        return False
+
+    action.payload = parsed_payload
+    return True
+
+
+def _insert_debug_action(app_state: AppState, phase_id: int, position: int) -> None:
+    """Insert a debug action into a phase and persist project changes."""
+    if app_state.current_project is None:
+        ui.notify("No project loaded.", type="negative")
+        return
+
+    try:
+        action_type_defaults = app_state.config_manager.get_action_type_defaults()
+    except (OSError, ValueError) as exc:
+        ui.notify(f"Unable to load action defaults: {exc}", type="negative")
+        return
+
+    phase_indices = [
+        index
+        for index, item in enumerate(app_state.current_project.actions)
+        if item.phase_id == phase_id
+    ]
+    if not phase_indices:
+        ui.notify(f"No actions found for phase {phase_id}.", type="negative")
+        return
+
+    insertion_index = phase_indices[0] + position
+    try:
+        app_state.action_generator.insert_debug_action(
+            app_state.current_project.actions,
+            phase_id,
+            position,
+            action_type_defaults,
+        )
+    except ValueError as exc:
+        ui.notify(str(exc), type="negative")
+        return
+
+    inserted_action = app_state.current_project.actions[insertion_index]
+    try:
+        executor_config = app_state.config_manager.get_executor_config()
+        context = app_state.payload_resolver.build_context(
+            project=app_state.current_project,
+            phase_id=phase_id,
+            component_id=None,
+            executor_config=executor_config,
+        )
+        resolved = app_state.payload_resolver.resolve_payload(
+            inserted_action.payload,
+            context,
+        )
+        inserted_action.payload = resolved.payload
+    except (OSError, ValueError) as exc:
+        ui.notify(
+            f"Debug action inserted, but payload resolution failed: {exc}",
+            type="warning",
+        )
+
+    project_service = _project_service_for_main_screen(app_state)
+    try:
+        project_service.save_project(app_state.current_project)
+    except OSError as exc:
+        ui.notify(f"Debug action inserted, but save failed: {exc}", type="warning")
+        return
+
+    ui.notify("Debug action inserted", type="positive")
+
+
+def _show_payload_editor(
+    app_state: AppState,
+    project_service: ProjectService,
+    action: Action,
+    refresh_action_list: Callable[[], None],
+    refresh_response_panel: Callable[[], None] | None = None,
+) -> None:
+    """Open a dialog to view and edit an action payload as JSON."""
+    dialog = ui.dialog()
+    with dialog, ui.card().classes("q-pa-md").style("width: 900px; max-width: 95vw"):
+        ui.label("Edit Payload").classes("text-h6")
+        ui.label(
+            "Edit the JSON payload. Unresolved variables like {{phase_id}} are listed below."
+        ).classes("text-caption text-grey-7")
+
+        editor = ui.textarea(value=json.dumps(action.payload, indent=2)).props(
+            "rows=20"
+        )
+        editor.classes("w-full")
+
+        unresolved_label = ui.label("Unresolved placeholders").classes(
+            "text-warning text-subtitle2"
+        )
+        unresolved_container = ui.column().classes("q-gutter-xs")
+
+        def _refresh_unresolved() -> None:
+            unresolved = _find_unresolved_variables(str(editor.value or ""))
+            unresolved_container.clear()
+            unresolved_label.visible = bool(unresolved)
+            if not unresolved:
+                return
+            for variable_name in unresolved:
+                ui.label(f"{{{{{variable_name}}}}}").classes("text-warning")
+
+        _refresh_unresolved()
+
+        editor.on_value_change(lambda _: _refresh_unresolved())
+
+        with ui.row().classes("w-full justify-end q-gutter-sm"):
+
+            def _cancel() -> None:
+                dialog.close()
+
+            async def _save() -> None:
+                saved = _save_edited_payload(action, str(editor.value or ""))
+                if not saved:
+                    ui.notify(
+                        "Invalid JSON. Payload must be a JSON object.",
+                        type="negative",
+                    )
+                    return
+
+                if app_state.current_project is not None:
+                    try:
+                        await run.io_bound(
+                            project_service.save_project, app_state.current_project
+                        )
+                    except OSError as exc:
+                        ui.notify(
+                            f"Payload updated, but save failed: {exc}", type="warning"
+                        )
+                        return
+
+                ui.notify("Payload updated", type="positive")
+                dialog.close()
+                refresh_action_list()
+                if refresh_response_panel is not None:
+                    refresh_response_panel()
+
+            ui.button("Cancel", on_click=_cancel).props("outline")
+            ui.button("Save", icon="save", on_click=_save, color="primary")
+
+    dialog.open()
 
 
 def _group_actions_by_phase(
@@ -250,6 +412,34 @@ def _render_action_list(
                                 if completing_action_id == action.action_id:
                                     complete_button.props("loading")
 
+                                ui.button(
+                                    icon="edit",
+                                    on_click=lambda current_action=action: _show_payload_editor(
+                                        app_state,
+                                        project_service,
+                                        current_action,
+                                        _render_action_list.refresh,
+                                        refresh_response_panel,
+                                    ),
+                                    color="secondary",
+                                ).props("dense flat")
+
+                with ui.row().classes("w-full justify-end q-mt-sm"):
+                    ui.button(
+                        "Add Debug",
+                        icon="bug_report",
+                        color="warning",
+                        on_click=lambda current_phase_id=phase_id, phase_count=len(
+                            actions
+                        ): _show_insert_debug_dialog(
+                            app_state,
+                            current_phase_id,
+                            phase_count,
+                            _render_action_list.refresh,
+                            refresh_response_panel,
+                        ),
+                    ).props("outline")
+
     async def _handle_dispatch(action: Action) -> None:
         app_state.dispatching_action_id = action.action_id
         _render_action_list.refresh()
@@ -277,6 +467,56 @@ def _render_action_list(
         _render_action_list.refresh()
         if refresh_response_panel is not None:
             refresh_response_panel()
+
+
+def _show_insert_debug_dialog(
+    app_state: AppState,
+    phase_id: int,
+    phase_action_count: int,
+    refresh_action_list: Callable[[], None],
+    refresh_response_panel: Callable[[], None] | None = None,
+) -> None:
+    """Open a dialog to choose insertion position for a debug action."""
+    dialog = ui.dialog()
+    with dialog, ui.card().classes("q-pa-md").style("width: 420px; max-width: 90vw"):
+        ui.label(f"Insert Debug Action: Phase {phase_id}").classes("text-h6")
+        ui.label(f"Choose a position between 0 and {phase_action_count}.").classes(
+            "text-caption text-grey-7"
+        )
+
+        position_input = ui.number(
+            "Insert at position",
+            value=phase_action_count,
+            min=0,
+            max=phase_action_count,
+            step=1,
+        ).classes("w-full")
+
+        with ui.row().classes("w-full justify-end q-gutter-sm"):
+
+            def _cancel() -> None:
+                dialog.close()
+
+            def _confirm() -> None:
+                raw_position = position_input.value
+                try:
+                    position = int(raw_position) if raw_position is not None else -1
+                except (TypeError, ValueError):
+                    ui.notify(
+                        "Insert position must be a valid number.", type="negative"
+                    )
+                    return
+
+                _insert_debug_action(app_state, phase_id, position)
+                refresh_action_list()
+                if refresh_response_panel is not None:
+                    refresh_response_panel()
+                dialog.close()
+
+            ui.button("Cancel", on_click=_cancel).props("outline")
+            ui.button("Insert", icon="add", on_click=_confirm, color="warning")
+
+    dialog.open()
 
 
 @ui.refreshable
