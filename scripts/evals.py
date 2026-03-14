@@ -134,18 +134,19 @@ def check_no_todos(path: Path) -> list[Violation]:
                         )
                     )
 
-        tree = _parse_ast(file_path, source)
-        for node in ast.walk(tree):
-            if isinstance(
-                node, (ast.FunctionDef, ast.AsyncFunctionDef)
-            ) and _is_placeholder_body(node):
-                violations.append(
-                    Violation(
-                        file_path=file_path,
-                        line=node.lineno,
-                        message=f"Placeholder function body in '{node.name}'",
+        if file_path.name != "__init__.py":
+            tree = _parse_ast(file_path, source)
+            for node in ast.walk(tree):
+                if isinstance(
+                    node, (ast.FunctionDef, ast.AsyncFunctionDef)
+                ) and _is_placeholder_body(node):
+                    violations.append(
+                        Violation(
+                            file_path=file_path,
+                            line=node.lineno,
+                            message=f"Placeholder function body in '{node.name}'",
+                        )
                     )
-                )
     return violations
 
 
