@@ -44,3 +44,32 @@
 
 ### Deviations
 - Could not execute the full validation toolchain in this sandbox because Python 3.13 and pre-provisioned venv tooling were unavailable; implementation remains aligned with CI runtime expectations.
+
+## Component 3.3 - Project Service: CRUD & Persistence
+- Extended `app/src/services/project_service.py` with project persistence APIs and new types:
+  - `ProjectNotFoundError` for missing project files.
+  - `ProjectSummary` dataclass for lightweight listing output.
+  - `save_project(project)` with timestamp refresh and atomic JSON writes (`.tmp` + `os.replace`).
+  - `load_project(project_id)` with file-not-found handling and `Project.model_validate`.
+  - `list_projects()` returning summary objects sorted by `updated_at` descending.
+  - `delete_project(project_id)` for file deletion with missing-file handling.
+- Added filesystem path helper `_project_file_path()` and centralized use of `Settings.projects_dir`.
+- Added descriptive file I/O error wrapping for `PermissionError`/`OSError` paths.
+- Implemented malformed listing resilience: invalid JSON or missing summary fields are logged at WARNING and skipped.
+- Updated `app/src/services/__init__.py` exports to include `ProjectNotFoundError` and `ProjectSummary`.
+- Expanded `tests/test_project_service.py` with CRUD-focused coverage:
+  - save file creation and timestamp updates,
+  - save/load round-trip validation,
+  - load missing-project behavior,
+  - list sorting and empty-directory behavior,
+  - malformed JSON skip behavior,
+  - delete success and missing-project behavior,
+  - atomic write assertion by capturing `os.replace` source and destination.
+
+### Decisions
+- Kept list scanning fast by reading only four summary fields from JSON rather than validating full `Project` objects.
+- Used `os.replace` for atomic promotion of temp files to mitigate corruption risk during OneDrive synchronization.
+- Preserved existing link workflow behavior by confining changes to persistence concerns and export surface only.
+
+### Deviations
+- Validation was executed in a Python 3.12 sandbox with `--ignore-requires-python` due local runtime constraints; tests and quality checks passed for updated scope.
