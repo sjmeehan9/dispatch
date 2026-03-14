@@ -8,8 +8,10 @@ from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
 from nicegui import app, ui
 
+from app.src.ui.action_type_defaults import render_action_type_defaults
 from app.src.ui.executor_config import render_executor_config
 from app.src.ui.initial_screen import render_initial_screen
+from app.src.ui.secrets_screen import render_secrets_screen
 from app.src.ui.state import AppState
 
 app_state = AppState()
@@ -57,14 +59,14 @@ def executor_config_page() -> None:
 
 @ui.page("/config/action-types")
 def action_types_page() -> None:
-    """Render the action-type defaults route placeholder."""
-    ui.label("Action type defaults route")
+    """Render the action-type defaults screen."""
+    render_action_type_defaults(app_state)
 
 
 @ui.page("/config/secrets")
 def secrets_page() -> None:
-    """Render the secrets route placeholder."""
-    ui.label("Secrets route")
+    """Render the secrets management screen."""
+    render_secrets_screen(app_state)
 
 
 @ui.page("/project/link")

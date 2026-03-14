@@ -93,3 +93,36 @@
 
 ### Deviations
 - None.
+
+## Component 4.4 - Action Type Defaults & Secrets Screens
+- Implemented `render_action_type_defaults(app_state)` in `app/src/ui/action_type_defaults.py`.
+- Added full `/config/action-types` editor with:
+  - Five action-type tabs (`implement`, `test`, `review`, `document`, `debug`)
+  - Per-type payload field controls for all template keys in persisted defaults
+  - Typed controls (`ui.textarea` for `agent_instructions`, `ui.number` for `timeout_minutes`, `ui.input` for other keys)
+  - Variable hint expansion panel documenting all supported `{{placeholders}}`
+  - Save workflow to `ConfigManager.save_action_type_defaults(...)` plus `app_state.reload_config()`
+- Implemented `render_secrets_screen(app_state)` in `app/src/ui/secrets_screen.py`.
+- Added `/config/secrets` form with masked inputs for:
+  - `GITHUB_TOKEN`
+  - `AUTOPILOT_API_KEY`
+  - `OPENAI_API_KEY` (optional)
+- Added masked “already set” placeholders via `Settings.get_secret(...)` without exposing secret values.
+- Implemented selective secret persistence:
+  - Saves only non-empty values via `ConfigManager.set_secret(...)`
+  - Avoids overwriting existing secrets with empty strings
+  - Shows warning when no new values are provided
+- Updated route wiring in `app/src/main.py`:
+  - `/config/action-types` now renders `render_action_type_defaults(app_state)`
+  - `/config/secrets` now renders `render_secrets_screen(app_state)`
+- Added focused tests:
+  - `tests/test_action_type_defaults.py`
+  - `tests/test_secrets_screen.py`
+  - `tests/test_main.py` route-content assertions for both new screens
+
+### Decisions
+- Kept the persistence boundary in `ConfigManager` (JSON defaults + local env secrets), so UI remains a thin adapter over existing services.
+- Retained local `.env/.env.local` secret writes for app runtime while continuing to support CI secret injection (`TOKEN` alias for `GITHUB_TOKEN`) through existing `Settings.get_secret` behavior.
+
+### Deviations
+- Validation and test execution ran on Python 3.12 in this sandbox; project target remains Python 3.13+.
