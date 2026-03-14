@@ -160,3 +160,27 @@
 
 ### Deviations
 - Validation executed under Python 3.12 in this sandbox (`--ignore-requires-python` for dependency install), while project target remains Python 3.13+.
+
+## Component 3.7 - Webhook Service
+- Implemented `WebhookService` in `app/src/services/webhook_service.py` as a thread-safe in-memory store keyed by `run_id`.
+- Added `store(run_id, data)` to persist webhook callback payloads alongside insertion timestamps for expiry tracking.
+- Added `retrieve(run_id)` to return stored payloads or `None` when no callback data exists.
+- Added `has_result(run_id)` for lightweight presence checks without materializing payload data.
+- Added `clear(run_id)` for idempotent single-entry removal.
+- Added `clear_stale(max_age_seconds=3600)` to remove aged entries and return the number of entries evicted.
+- Added INFO-level logging for webhook receipt and stale cleanup operations.
+- Updated `app/src/services/__init__.py` exports to include `WebhookService`.
+- Added focused unit tests in `tests/test_webhook_service.py` covering:
+  - store/retrieve round-trip behavior,
+  - unknown run retrieval returning `None`,
+  - presence checks through `has_result`,
+  - entry removal through `clear`,
+  - stale eviction behavior using mocked time.
+
+### Decisions
+- Used a single `threading.Lock` around all store mutations and reads to ensure consistency across callback and polling threads.
+- Stored tuples of `(timestamp, payload)` so stale cleanup can run without additional index structures.
+- Kept cleanup policy explicit through `clear_stale()` rather than auto-evicting on every access.
+
+### Deviations
+- None.

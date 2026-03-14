@@ -17,6 +17,7 @@ from app.src.services.project_service import (
     ProjectService,
     ProjectSummary,
 )
+from app.src.services.webhook_service import WebhookService
 
 __all__ = [
     "ActionGenerator",
@@ -33,4 +34,5 @@ __all__ = [
     "ProjectNotFoundError",
     "ProjectService",
     "ProjectSummary",
+    "WebhookService",
 ]
