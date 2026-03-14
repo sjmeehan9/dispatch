@@ -102,9 +102,7 @@ class ActionGenerator:
         """
 
         phase_indices = [
-            index
-            for index, action in enumerate(actions)
-            if action.phase_id == phase_id
+            index for index, action in enumerate(actions) if action.phase_id == phase_id
         ]
         if not phase_indices:
             raise ValueError(f"No actions found for phase {phase_id}.")
