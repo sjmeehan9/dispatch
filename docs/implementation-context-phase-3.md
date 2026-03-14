@@ -99,3 +99,30 @@
 
 ### Deviations
 - The component breakdown’s “3 components generates 7 actions” count appears inconsistent with required sequence; implementation follows explicit ordering rules (`3 Implement + Test + Review + Document = 6`).
+
+## Component 3.5 - Payload Resolver Service
+- Implemented `PayloadResolver` in `app/src/services/payload_resolver.py` with:
+  - `build_context(project, phase_id, component_id, executor_config)` for string-only context assembly.
+  - `resolve_payload(payload, context)` for deep-copied recursive placeholder replacement.
+  - `_resolve_value()` traversal across nested dict/list payload structures.
+  - `_replace_match()` strict `{{word_chars}}` substitution with unresolved tracking.
+- Implemented context keys required by the component spec:
+  `repository`, `branch`, `phase_id`, `phase_name`, `component_id`, `component_name`,
+  `component_breakdown_doc`, `agent_paths` (JSON string), `webhook_url`, `pr_number`.
+- Added strict lookup errors for invalid `phase_id` or `component_id` to fail loudly on invalid action context.
+- Updated `app/src/services/__init__.py` exports to include `PayloadResolver`.
+- Added focused tests in `tests/test_payload_resolver.py` covering:
+  - context construction with component and without component,
+  - phase/component lookup error paths,
+  - recursive replacement across nested dicts/lists,
+  - multiple placeholders in a single string,
+  - non-string passthrough behavior,
+  - unresolved variable preservation and deduplicated unresolved list tracking.
+
+### Decisions
+- Kept resolver stateless using class methods for easy service-layer reuse.
+- Used strict regex `r"\{\{(\w+)\}\}"` exactly as specified to constrain placeholder names.
+- Serialized `agent_paths` with `json.dumps(project.agent_files)` so executor payloads receive JSON-compatible list text.
+
+### Deviations
+- None.
