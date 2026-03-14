@@ -8,6 +8,7 @@ from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
 from nicegui import app, ui
 
+from app.src.ui.initial_screen import render_initial_screen
 from app.src.ui.state import AppState
 
 app_state = AppState()
@@ -43,8 +44,8 @@ _ensure_run_config()
 
 @ui.page("/")
 def initial_screen_page() -> None:
-    """Render the initial screen route placeholder."""
-    ui.label("Initial screen route")
+    """Render the initial screen."""
+    render_initial_screen(app_state)
 
 
 @ui.page("/config/executor")
