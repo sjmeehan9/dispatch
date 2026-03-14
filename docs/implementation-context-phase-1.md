@@ -59,3 +59,18 @@
 
 ### Deviations
 - None.
+
+## Component 1.4 - E2E Testing Scenarios, README & Phase Validation
+- Created `docs/e2e-testing-scenarios.md` with five E2E scenarios (E2E-001 to E2E-005), each including preconditions, explicit steps, expected results, and pass/fail criteria.
+- Added a scenario readiness matrix mapping each E2E scenario to its earliest executable phase.
+- Created a concise project `README.md` skeleton covering prerequisites, quick start, configuration, usage outline, architecture references, and core documentation links.
+- Created `docs/autopilot-runbook-dispatch.md` as a Phase 1 runbook skeleton for AI agent execution of application and validation commands.
+- Added explicit secrets guidance in documentation: `.env/.env.local` remains local-only and should not be committed; CI uses GitHub repository/environment secrets with `TOKEN` mapped to `GITHUB_TOKEN`.
+- Created `docs/components/phase-1-component-1-4-overview.md` to summarize scope, decisions, and outputs for this component.
+
+### Decisions
+- Kept README and runbook intentionally concise in line with the phased documentation plan; full expansion is deferred to Phase 7 by design.
+- Structured E2E scenarios as progressively executable artifacts so they can be reused as acceptance checks in later phase validation components.
+
+### Deviations
+- Full local validation execution could not be completed in this environment because Python 3.13 and `pnpm` were not available (`python` is 3.12.3 and `pnpm` is missing). CI remains configured to run with Python 3.13.
