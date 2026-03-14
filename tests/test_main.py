@@ -61,6 +61,28 @@ def test_executor_config_route_renders_form(main_module: ModuleType) -> None:
     assert "Webhook URL (optional)" in response.text
 
 
+def test_action_type_defaults_route_renders_form(main_module: ModuleType) -> None:
+    """Action type defaults route should render expected labels."""
+    with TestClient(main_module.app) as client:
+        response = client.get("/config/action-types")
+
+    assert response.status_code == 200
+    assert "Action Type Defaults" in response.text
+    assert "Available Variables" in response.text
+    assert "Implement Template" in response.text
+
+
+def test_secrets_route_renders_form(main_module: ModuleType) -> None:
+    """Secrets route should render expected labels."""
+    with TestClient(main_module.app) as client:
+        response = client.get("/config/secrets")
+
+    assert response.status_code == 200
+    assert "Secrets Management" in response.text
+    assert "GitHub Token" in response.text
+    assert "Autopilot API Key" in response.text
+
+
 def test_webhook_callback_stores_payload(main_module: ModuleType) -> None:
     """Webhook callback should persist payload data to WebhookService."""
     payload = {"run_id": "run-123", "status": "completed"}
