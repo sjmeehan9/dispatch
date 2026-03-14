@@ -3,17 +3,23 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import pytest
 
 from app.src.config.settings import Settings
+from app.src.models import Project
 from app.src.services.github_client import (
     GitHubAuthError,
     GitHubFileEntry,
     GitHubNotFoundError,
 )
-from app.src.services.project_service import ProjectLinkError, ProjectService
+from app.src.services.project_service import (
+    ProjectLinkError,
+    ProjectNotFoundError,
+    ProjectService,
+)
 
 
 class _FakeGitHubClient:
@@ -83,6 +89,23 @@ def _sample_phase_progress_payload() -> dict[str, object]:
             }
         ],
     }
+
+
+def _sample_project(
+    project_id: str, updated_at: str = "2026-03-14T00:00:00Z"
+) -> Project:
+    return Project(
+        project_id=project_id,
+        project_name=f"Project {project_id}",
+        repository="owner/repo",
+        github_token_env_key="GITHUB_TOKEN",
+        phase_progress=_sample_phase_progress_payload(),
+        phases=[],
+        agent_files=[],
+        actions=[],
+        created_at="2026-03-14T00:00:00Z",
+        updated_at=updated_at,
+    )
 
 
 def test_link_project_returns_valid_project(
@@ -241,3 +264,155 @@ def test_discover_agent_files_returns_empty_when_missing(
     )
 
     assert service._discover_agent_files("owner", "repo") == []
+
+
+def test_save_project_creates_valid_json_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    settings = _build_settings(monkeypatch, tmp_path)
+    service = ProjectService(settings=settings, github_client=_FakeGitHubClient())
+    project = _sample_project("project-1")
+    original_updated_at = project.updated_at
+
+    service.save_project(project)
+
+    project_path = settings.projects_dir / "project-1.json"
+    assert project_path.exists()
+    payload = json.loads(project_path.read_text(encoding="utf-8"))
+    assert payload["project_id"] == "project-1"
+    assert payload["project_name"] == "Project project-1"
+    assert project.updated_at.endswith("Z")
+    assert project.updated_at != original_updated_at
+
+
+def test_save_and_load_project_round_trip(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    settings = _build_settings(monkeypatch, tmp_path)
+    service = ProjectService(settings=settings, github_client=_FakeGitHubClient())
+    project = _sample_project("project-2")
+
+    service.save_project(project)
+    loaded = service.load_project("project-2")
+
+    assert loaded.model_dump(mode="json") == project.model_dump(mode="json")
+
+
+def test_load_project_raises_for_missing_project(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    settings = _build_settings(monkeypatch, tmp_path)
+    service = ProjectService(settings=settings, github_client=_FakeGitHubClient())
+
+    with pytest.raises(ProjectNotFoundError, match="missing"):
+        service.load_project("missing")
+
+
+def test_list_projects_returns_sorted_summaries(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    settings = _build_settings(monkeypatch, tmp_path)
+    settings.projects_dir.mkdir(parents=True, exist_ok=True)
+    (settings.projects_dir / "older.json").write_text(
+        json.dumps(
+            {
+                "project_id": "older",
+                "project_name": "Older",
+                "repository": "owner/repo",
+                "updated_at": "2026-03-14T00:00:00Z",
+            }
+        ),
+        encoding="utf-8",
+    )
+    (settings.projects_dir / "newer.json").write_text(
+        json.dumps(
+            {
+                "project_id": "newer",
+                "project_name": "Newer",
+                "repository": "owner/repo",
+                "updated_at": "2026-03-14T02:00:00Z",
+            }
+        ),
+        encoding="utf-8",
+    )
+    service = ProjectService(settings=settings, github_client=_FakeGitHubClient())
+
+    summaries = service.list_projects()
+
+    assert [summary.project_id for summary in summaries] == ["newer", "older"]
+
+
+def test_list_projects_returns_empty_when_none_exist(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    settings = _build_settings(monkeypatch, tmp_path)
+    service = ProjectService(settings=settings, github_client=_FakeGitHubClient())
+
+    assert service.list_projects() == []
+
+
+def test_list_projects_skips_malformed_json(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    settings = _build_settings(monkeypatch, tmp_path)
+    settings.projects_dir.mkdir(parents=True, exist_ok=True)
+    (settings.projects_dir / "broken.json").write_text("{not-json", encoding="utf-8")
+    service = ProjectService(settings=settings, github_client=_FakeGitHubClient())
+
+    summaries = service.list_projects()
+
+    assert summaries == []
+    assert "Skipping malformed project file" in caplog.text
+
+
+def test_delete_project_removes_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    settings = _build_settings(monkeypatch, tmp_path)
+    service = ProjectService(settings=settings, github_client=_FakeGitHubClient())
+    project = _sample_project("project-delete")
+    service.save_project(project)
+
+    service.delete_project("project-delete")
+
+    assert not (settings.projects_dir / "project-delete.json").exists()
+    with pytest.raises(ProjectNotFoundError):
+        service.delete_project("project-delete")
+
+
+def test_delete_project_raises_for_missing_project(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    settings = _build_settings(monkeypatch, tmp_path)
+    service = ProjectService(settings=settings, github_client=_FakeGitHubClient())
+
+    with pytest.raises(ProjectNotFoundError, match="missing"):
+        service.delete_project("missing")
+
+
+def test_save_project_uses_atomic_replace(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    settings = _build_settings(monkeypatch, tmp_path)
+    service = ProjectService(settings=settings, github_client=_FakeGitHubClient())
+    project = _sample_project("project-atomic")
+    replace_calls: list[tuple[str, str, bool]] = []
+    real_replace = os.replace
+
+    def _capture_replace(
+        src: os.PathLike[str] | str, dst: os.PathLike[str] | str
+    ) -> None:
+        src_path = Path(src)
+        dst_path = Path(dst)
+        replace_calls.append((str(src_path), str(dst_path), src_path.exists()))
+        real_replace(src_path, dst_path)
+
+    monkeypatch.setattr("app.src.services.project_service.os.replace", _capture_replace)
+
+    service.save_project(project)
+
+    assert len(replace_calls) == 1
+    src, dst, src_existed = replace_calls[0]
+    assert src.endswith(".json.tmp")
+    assert dst.endswith(".json")
+    assert src_existed

@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 import uuid
+from dataclasses import dataclass
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 from pydantic import ValidationError
@@ -29,6 +32,20 @@ _REQUIRED_PHASE_FIELDS = ("phaseId", "phaseName", "components")
 
 class ProjectLinkError(Exception):
     """Raised when linking a project repository fails."""
+
+
+class ProjectNotFoundError(Exception):
+    """Raised when a project file is missing."""
+
+
+@dataclass(frozen=True)
+class ProjectSummary:
+    """Lightweight project summary returned by project listings."""
+
+    project_id: str
+    project_name: str
+    repository: str
+    updated_at: str
 
 
 class ProjectService:
@@ -95,6 +112,98 @@ class ProjectService:
             len(agent_files),
         )
         return project
+
+    def save_project(self, project: Project) -> None:
+        """Persist a project to disk using an atomic write."""
+
+        project.updated_at = (
+            datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        )
+        payload = project.model_dump(mode="json")
+        project_path = self._project_file_path(project.project_id)
+        temp_path = project_path.with_suffix(project_path.suffix + ".tmp")
+
+        self._settings.projects_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            temp_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+            os.replace(temp_path, project_path)
+        except (PermissionError, OSError) as exc:
+            raise OSError(
+                f"Failed to save project '{project.project_id}' at '{project_path}': {exc}"
+            ) from exc
+        _LOGGER.info("Saved project %s (%s)", project.project_id, project.project_name)
+
+    def load_project(self, project_id: str) -> Project:
+        """Load and validate a saved project by identifier."""
+
+        project_path = self._project_file_path(project_id)
+        if not project_path.exists():
+            raise ProjectNotFoundError(f"Project {project_id} not found")
+
+        try:
+            payload = json.loads(project_path.read_text(encoding="utf-8"))
+            project = Project.model_validate(payload)
+        except (PermissionError, OSError) as exc:
+            raise OSError(
+                f"Failed to load project '{project_id}' from '{project_path}': {exc}"
+            ) from exc
+        _LOGGER.info("Loaded project %s", project_id)
+        return project
+
+    def list_projects(self) -> list[ProjectSummary]:
+        """List saved projects as lightweight summaries."""
+
+        if not self._settings.projects_dir.exists():
+            return []
+
+        summaries: list[ProjectSummary] = []
+        for project_path in self._settings.projects_dir.glob("*.json"):
+            try:
+                payload = json.loads(project_path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError as exc:
+                _LOGGER.warning(
+                    "Skipping malformed project file %s: %s", project_path, exc
+                )
+                continue
+            except (PermissionError, OSError) as exc:
+                raise OSError(
+                    f"Failed to read project file '{project_path}': {exc}"
+                ) from exc
+
+            required_fields = ("project_id", "project_name", "repository", "updated_at")
+            if not isinstance(payload, dict) or any(
+                not isinstance(payload.get(field), str) for field in required_fields
+            ):
+                _LOGGER.warning(
+                    "Skipping project file %s with missing summary fields", project_path
+                )
+                continue
+
+            summaries.append(
+                ProjectSummary(
+                    project_id=payload["project_id"],
+                    project_name=payload["project_name"],
+                    repository=payload["repository"],
+                    updated_at=payload["updated_at"],
+                )
+            )
+
+        return sorted(summaries, key=lambda summary: summary.updated_at, reverse=True)
+
+    def delete_project(self, project_id: str) -> None:
+        """Delete a saved project file by identifier."""
+
+        project_path = self._project_file_path(project_id)
+        if not project_path.exists():
+            raise ProjectNotFoundError(f"Project {project_id} not found")
+
+        try:
+            project_path.unlink()
+        except (PermissionError, OSError) as exc:
+            raise OSError(
+                f"Failed to delete project '{project_id}' at '{project_path}': {exc}"
+            ) from exc
+        _LOGGER.info("Deleted project %s", project_id)
 
     def _validate_repository(self, repository: str) -> tuple[str, str]:
         """Validate repository format and return owner/repo parts.
@@ -254,3 +363,8 @@ class ProjectService:
         """Return file paths only from directory entries."""
 
         return [entry.path for entry in entries if entry.type == "file" and entry.path]
+
+    def _project_file_path(self, project_id: str) -> Path:
+        """Return the on-disk JSON path for a project identifier."""
+
+        return self._settings.projects_dir / f"{project_id}.json"

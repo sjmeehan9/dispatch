@@ -8,7 +8,12 @@ from app.src.services.github_client import (
     GitHubFileEntry,
     GitHubNotFoundError,
 )
-from app.src.services.project_service import ProjectLinkError, ProjectService
+from app.src.services.project_service import (
+    ProjectLinkError,
+    ProjectNotFoundError,
+    ProjectService,
+    ProjectSummary,
+)
 
 __all__ = [
     "GitHubAPIError",
@@ -18,5 +23,7 @@ __all__ = [
     "GitHubFileEntry",
     "GitHubNotFoundError",
     "ProjectLinkError",
+    "ProjectNotFoundError",
     "ProjectService",
+    "ProjectSummary",
 ]
