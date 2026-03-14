@@ -126,3 +126,37 @@
 
 ### Deviations
 - None.
+
+## Component 3.6 - Executor Protocol & Autopilot Implementation
+- Implemented `Executor` protocol and `AutopilotExecutor` in `app/src/services/executor.py`.
+- Added `AutopilotExecutor.dispatch(payload, config)` with per-dispatch API key lookup via `Settings.get_secret(config.api_key_env_key)`.
+- Added request dispatch to `config.api_endpoint` using `httpx.Client` with:
+  - `X-API-Key` and `Content-Type: application/json` headers,
+  - JSON payload body,
+  - strict 30-second timeout.
+- Added response normalization to `ExecutorResponse`:
+  - 2xx responses map to `status_code`, parsed status/message, optional `run_id`, and JSON `raw_response`,
+  - non-2xx responses return parsed error text with `run_id=None` and `raw_response=None`.
+- Added network and transport failure handling that never raises to callers:
+  - missing API key,
+  - connect failures,
+  - timeouts,
+  - other `httpx.HTTPError` failures,
+  all returned as `ExecutorResponse(status_code=0, ...)`.
+- Added INFO/WARNING logging for dispatch start, response status, and failure outcomes without logging secrets or payload content.
+- Updated `app/src/services/__init__.py` exports to include `Executor` and `AutopilotExecutor`.
+- Added focused unit coverage in `tests/test_executor.py` for:
+  - request headers/payload/timeout behavior,
+  - successful response parsing with `run_id`,
+  - 401 error mapping,
+  - connection failure and timeout handling,
+  - missing API key behavior,
+  - protocol conformance check.
+
+### Decisions
+- Used a `runtime_checkable` protocol to allow explicit structural conformance assertions in tests.
+- Used per-call `httpx.Client` creation to keep state local to a dispatch and simplify lifecycle concerns.
+- Added helper methods for response parsing to keep dispatch logic readable and deterministic.
+
+### Deviations
+- Validation executed under Python 3.12 in this sandbox (`--ignore-requires-python` for dependency install), while project target remains Python 3.13+.
