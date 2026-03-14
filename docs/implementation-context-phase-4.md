@@ -294,3 +294,32 @@
 
 ### Deviations
 - None.
+
+## Component 4.10 - Integration Testing & Phase Validation
+- Added integration startup coverage in `tests/test_app_startup.py`:
+  - validates `app.src.main` import + `AppState` initialization
+  - verifies required UI and webhook routes are registered
+  - verifies webhook callback/poll round-trip behavior and pending response semantics
+- Added full workflow integration coverage in `tests/test_ui_integration.py`:
+  - saves executor config and action defaults through `ConfigManager`
+  - validates `AppState.is_fully_configured` gate success
+  - links a project using `ProjectService` with a mocked GitHub client
+  - generates ordered actions via `ActionGenerator`
+  - resolves payload templates via `PayloadResolver` and asserts no unresolved placeholders
+  - dispatches payload via `AutopilotExecutor` with mocked `httpx.Client`
+  - stores and retrieves callback payload through `WebhookService`
+  - marks action completion and verifies save/load round-trip persistence
+- Updated `docs/autopilot-runbook-dispatch.md` with:
+  - explicit app launch command and UI access URL
+  - first-time setup flow (Executor -> Action Types -> Secrets -> Link Project)
+  - quality validation command set (pytest/black/isort/evals)
+  - E2E readiness guidance for E2E-001 through E2E-003
+  - remote secret guidance: do not rely on `.env/.env.local` in GitHub; use repository/environment secrets and `TOKEN` alias for `GITHUB_TOKEN`
+
+### Decisions
+- Kept Component 4.10 integration tests at the service-chain boundary to maximize determinism while still proving end-to-end behavior.
+- Mocked external integrations (GitHub API and executor HTTP dispatch) and validated only Dispatch-owned transformations/state transitions.
+- Added a dedicated startup test module even though route checks exist elsewhere, to keep Phase 4 validation intent explicit and auditable.
+
+### Deviations
+- None.
