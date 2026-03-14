@@ -98,6 +98,22 @@ def render_executor_config(app_state: AppState) -> None:
                 "text-caption text-grey-7"
             )
 
+            llm_available = app_state.llm_service.is_available()
+            use_llm_switch = ui.switch(
+                "Use LLM for payload generation",
+                value=(existing.use_llm if existing else False),
+            ).classes("w-full")
+            if not llm_available:
+                use_llm_switch.props("disable")
+                with ui.tooltip(
+                    "Configure an OpenAI API key in Manage Secrets to enable LLM payload generation"
+                ):
+                    ui.label("LLM payload generation is unavailable")
+            ui.label(
+                "When enabled, AI generates context-aware payload instructions before dispatch. "
+                "You can always review and edit before sending."
+            ).classes("text-caption text-grey-7")
+
             def _save_config() -> None:
                 if not executor_name.validate():
                     notify_error("Executor Name is required")
@@ -123,6 +139,7 @@ def render_executor_config(app_state: AppState) -> None:
                         api_endpoint=api_endpoint.value.strip(),
                         api_key_env_key=api_key_env_var.value.strip(),
                         webhook_url=webhook_url.value.strip() or None,
+                        use_llm=bool(use_llm_switch.value),
                     )
                     app_state.config_manager.save_executor_config(config)
                     app_state.reload_config()

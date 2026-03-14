@@ -118,19 +118,30 @@ class _FakeUI:
         self.notifications.append((message, type))
 
 
-def _build_app_state() -> tuple[SimpleNamespace, list[tuple[str, str]]]:
+def _build_app_state() -> tuple[SimpleNamespace, list[tuple[str, str]], dict[str, int]]:
     saved_secrets: list[tuple[str, str]] = []
+    reinit_calls = {"count": 0}
 
     def _set_secret(key: str, value: str) -> None:
         saved_secrets.append((key, value))
 
+    def _reinit_llm_service() -> None:
+        reinit_calls["count"] += 1
+
     app_state = SimpleNamespace(
         settings=SimpleNamespace(
-            get_secret=lambda key: "existing-value" if key == "GITHUB_TOKEN" else None
+            get_secret=lambda key: (
+                "existing-value"
+                if key == "GITHUB_TOKEN"
+                else "gpt-4o-mini"
+                if key == "OPENAI_MODEL"
+                else None
+            )
         ),
         config_manager=SimpleNamespace(set_secret=_set_secret),
+        reinit_llm_service=_reinit_llm_service,
     )
-    return app_state, saved_secrets
+    return app_state, saved_secrets, reinit_calls
 
 
 def test_render_secrets_screen_shows_masked_placeholders(
@@ -149,13 +160,14 @@ def test_render_secrets_screen_shows_masked_placeholders(
         "notify_warning",
         lambda message: fake_ui.notify(message, "warning"),
     )
-    app_state, _ = _build_app_state()
+    app_state, _, _ = _build_app_state()
 
     secrets_screen.render_secrets_screen(app_state)
 
     assert "Secrets Management" in fake_ui.labels
     assert fake_ui.inputs["GitHub Token"].placeholder == "••••••• (set)"
     assert fake_ui.inputs["Autopilot API Key"].placeholder == ""
+    assert fake_ui.inputs["OpenAI Model (Optional)"].placeholder == "gpt-4o-mini"
 
 
 def test_render_secrets_screen_saves_only_non_empty_values(
@@ -174,16 +186,19 @@ def test_render_secrets_screen_saves_only_non_empty_values(
         "notify_warning",
         lambda message: fake_ui.notify(message, "warning"),
     )
-    app_state, saved_secrets = _build_app_state()
+    app_state, saved_secrets, reinit_calls = _build_app_state()
 
     secrets_screen.render_secrets_screen(app_state)
     fake_ui.inputs["GitHub Token"].value = "gh-token"
     fake_ui.inputs["OpenAI API Key (Optional)"].value = "openai-key"
+    fake_ui.inputs["OpenAI Model (Optional)"].value = "gpt-4o"
 
     fake_ui.buttons["Save"].click()
 
     assert saved_secrets == [
         ("GITHUB_TOKEN", "gh-token"),
         ("OPENAI_API_KEY", "openai-key"),
+        ("OPENAI_MODEL", "gpt-4o"),
     ]
+    assert reinit_calls["count"] == 1
     assert fake_ui.notifications[-1] == ("Secrets saved", "positive")

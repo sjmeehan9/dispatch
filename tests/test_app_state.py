@@ -7,7 +7,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from app.src.services import ProjectService
+from app.src.services import LLMPayloadGenerator, LLMService, ProjectService
 from app.src.services.config_manager import ConfigManager
 from app.src.services.project_service import ProjectNotFoundError
 from app.src.ui.state import AppState
@@ -27,6 +27,8 @@ def test_app_state_initialises_without_errors(
     assert state.action_generator is not None
     assert state.payload_resolver is not None
     assert state.autopilot_executor is not None
+    assert isinstance(state.llm_service, LLMService)
+    assert isinstance(state.llm_payload_generator, LLMPayloadGenerator)
 
 
 def test_is_executor_configured_false_when_file_missing(
@@ -121,3 +123,21 @@ def test_ensure_project_returns_none_when_project_missing(
 
     assert loaded is None
     assert state.current_project is None
+
+
+def test_reinit_llm_service_recreates_instances(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """reinit_llm_service should replace LLM service and payload generator instances."""
+    monkeypatch.setenv("DISPATCH_DATA_DIR", str(tmp_path))
+    state = AppState()
+
+    original_service = state.llm_service
+    original_generator = state.llm_payload_generator
+
+    state.reinit_llm_service()
+
+    assert state.llm_service is not original_service
+    assert state.llm_payload_generator is not original_generator
+    assert isinstance(state.llm_service, LLMService)
+    assert isinstance(state.llm_payload_generator, LLMPayloadGenerator)

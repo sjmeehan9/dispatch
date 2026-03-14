@@ -46,12 +46,17 @@ def render_secrets_screen(app_state: AppState) -> None:
                 password_toggle_button=True,
                 placeholder=_secret_placeholder(app_state, "OPENAI_API_KEY"),
             ).classes("w-full")
+            openai_model = ui.input(
+                "OpenAI Model (Optional)",
+                placeholder=(app_state.settings.get_secret("OPENAI_MODEL") or "gpt-4o"),
+            ).classes("w-full")
 
             def _save_secrets() -> None:
                 updates = {
                     "GITHUB_TOKEN": str(github_token.value).strip(),
                     "AUTOPILOT_API_KEY": str(autopilot_api_key.value).strip(),
                     "OPENAI_API_KEY": str(openai_api_key.value).strip(),
+                    "OPENAI_MODEL": str(openai_model.value).strip(),
                 }
                 saved_keys = 0
                 for key, value in updates.items():
@@ -63,6 +68,8 @@ def render_secrets_screen(app_state: AppState) -> None:
                 if saved_keys == 0:
                     notify_warning("No secret changes to save")
                     return
+
+                app_state.reinit_llm_service()
 
                 notify_success("Secrets saved")
 

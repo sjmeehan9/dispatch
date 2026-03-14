@@ -121,6 +121,31 @@ def test_executor_config_validates_endpoint_format() -> None:
         )
 
 
+def test_executor_config_use_llm_defaults_to_false_when_missing() -> None:
+    """Executor config should remain backward-compatible when use_llm is absent."""
+    config = ExecutorConfig(
+        executor_id="autopilot",
+        executor_name="Autopilot",
+        api_endpoint="http://localhost:8000/agent/run",
+        api_key_env_key="AUTOPILOT_API_KEY",
+    )
+
+    assert config.use_llm is False
+
+
+def test_executor_config_serializes_use_llm_field() -> None:
+    """Executor config should include use_llm when dumping persisted JSON payload."""
+    config = ExecutorConfig(
+        executor_id="autopilot",
+        executor_name="Autopilot",
+        api_endpoint="http://localhost:8000/agent/run",
+        api_key_env_key="AUTOPILOT_API_KEY",
+        use_llm=True,
+    )
+
+    assert config.model_dump()["use_llm"] is True
+
+
 def test_action_type_defaults_includes_all_action_payload_templates() -> None:
     defaults = ActionTypeDefaults(
         implement={"role": "implement"},

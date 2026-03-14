@@ -8,6 +8,8 @@ from app.src.services import (
     ActionGenerator,
     AutopilotExecutor,
     GitHubClient,
+    LLMPayloadGenerator,
+    LLMService,
     PayloadResolver,
     ProjectService,
     WebhookService,
@@ -27,6 +29,11 @@ class AppState:
         self.action_generator = ActionGenerator()
         self.payload_resolver = PayloadResolver()
         self.autopilot_executor = AutopilotExecutor(self.settings)
+        self.llm_service = LLMService()
+        self.llm_payload_generator = LLMPayloadGenerator(
+            self.llm_service,
+            self.payload_resolver,
+        )
 
         self.current_project: Project | None = None
         self.last_dispatched_action = None
@@ -81,6 +88,14 @@ class AppState:
             self.config_manager.get_executor_config()
         if self.is_action_types_configured:
             self.config_manager.get_action_type_defaults()
+
+    def reinit_llm_service(self) -> None:
+        """Reinitialize LLM service objects after secret updates."""
+        self.llm_service = LLMService()
+        self.llm_payload_generator = LLMPayloadGenerator(
+            self.llm_service,
+            self.payload_resolver,
+        )
 
     def clear_project(self) -> None:
         """Clear project-scoped runtime state when leaving project context."""

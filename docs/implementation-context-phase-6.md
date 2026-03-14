@@ -53,3 +53,34 @@ Date: 2026-03-15
 
 ### Deviations
 - Added `use_llm: bool = False` to `ExecutorConfig` during 6.2 to support required generator gating and testability before UI integration (6.3).
+
+## Component 6.3 - UI Integration
+
+Date: 2026-03-15
+
+### What Was Built
+- Added LLM lifecycle wiring to shared UI state with `llm_service`, `llm_payload_generator`, and `reinit_llm_service()`.
+- Extended executor config UI with a persisted `Use LLM for payload generation` toggle tied to `ExecutorConfig.use_llm`.
+- Added availability gating for the LLM toggle with disabled state and explanatory tooltip when no OpenAI API key is configured.
+- Extended secrets UI with `OpenAI Model` support (`OPENAI_MODEL`) and automatic LLM service reinitialization after secret updates.
+- Modified main screen dispatch flow so LLM-enabled actions run pre-dispatch generation in a thread, show a dedicated loading overlay, and open review-before-dispatch payload dialog.
+- Added `AI Generated` badge in payload review dialog when LLM generated instructions, plus warning notification on fallback to standard interpolation.
+
+### Key Files Created/Modified
+- app/src/ui/state.py
+- app/src/ui/executor_config.py
+- app/src/ui/secrets_screen.py
+- app/src/ui/main_screen.py
+- tests/test_app_state.py
+- tests/test_executor_config.py
+- tests/test_secrets_screen.py
+- tests/test_main_screen.py
+- tests/test_models.py
+
+### Design Decisions
+- Kept standard non-LLM dispatch path unchanged for backward compatibility and minimal workflow disruption.
+- Restricted loading overlay `Generating payload with AI...` to LLM-enabled dispatches so normal dispatch latency remains unchanged.
+- Reused existing payload editor for review-before-dispatch to preserve familiar manual editing behavior.
+
+### Deviations
+- Existing `OpenAI API Key` secrets field was already present; only `OpenAI Model` and LLM service reinitialization were added.

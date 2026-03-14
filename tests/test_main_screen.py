@@ -473,3 +473,100 @@ def test_insert_debug_action_inserts_at_position_and_persists(monkeypatch) -> No
     }
     assert project_service.saved_projects == [project]
     assert ("Debug action inserted", "positive") in fake_ui.notifications
+
+
+def test_is_llm_dispatch_enabled_checks_toggle_and_availability() -> None:
+    """LLM dispatch should require both executor toggle and service availability."""
+    app_state = SimpleNamespace(llm_service=SimpleNamespace(is_available=lambda: True))
+
+    enabled = main_screen._is_llm_dispatch_enabled(
+        app_state,
+        SimpleNamespace(use_llm=True),
+    )
+    disabled_by_toggle = main_screen._is_llm_dispatch_enabled(
+        app_state,
+        SimpleNamespace(use_llm=False),
+    )
+
+    app_state_unavailable = SimpleNamespace(
+        llm_service=SimpleNamespace(is_available=lambda: False)
+    )
+    disabled_by_key = main_screen._is_llm_dispatch_enabled(
+        app_state_unavailable,
+        SimpleNamespace(use_llm=True),
+    )
+
+    assert enabled is True
+    assert disabled_by_toggle is False
+    assert disabled_by_key is False
+
+
+def test_prepare_payload_for_dispatch_review_returns_standard_when_llm_disabled() -> None:
+    """Pre-dispatch preparation should use deterministic resolver when LLM toggle is off."""
+    project = _sample_project()
+    action = project.actions[0]
+
+    app_state = SimpleNamespace(
+        current_project=project,
+        payload_resolver=SimpleNamespace(
+            build_context=lambda **_: {
+                "repository": "owner/repo",
+            },
+            resolve_payload=lambda payload, context: ResolvedPayload(
+                payload={
+                    "repository": payload["repository"].replace(
+                        "{{repository}}", context["repository"]
+                    )
+                },
+                unresolved_variables=[],
+            ),
+        ),
+    )
+
+    payload, llm_used, fallback_reason = asyncio.run(
+        main_screen._prepare_payload_for_dispatch_review(
+            app_state,
+            action,
+            SimpleNamespace(use_llm=False),
+        )
+    )
+
+    assert payload == {"repository": "owner/repo"}
+    assert llm_used is False
+    assert fallback_reason is None
+
+
+def test_prepare_payload_for_dispatch_review_uses_llm_generator_when_enabled(
+    monkeypatch,
+) -> None:
+    """Pre-dispatch preparation should call LLM generator when toggle is enabled."""
+    project = _sample_project()
+    action = project.actions[0]
+
+    async def _fake_to_thread(func, *args):
+        return func(*args)
+
+    monkeypatch.setattr(asyncio, "to_thread", _fake_to_thread)
+
+    app_state = SimpleNamespace(
+        current_project=project,
+        llm_payload_generator=SimpleNamespace(
+            generate_payload=lambda _action, _project, _config: SimpleNamespace(
+                payload={"repository": "owner/repo", "agent_instructions": "AI"},
+                llm_used=True,
+                fallback_reason=None,
+            )
+        ),
+    )
+
+    payload, llm_used, fallback_reason = asyncio.run(
+        main_screen._prepare_payload_for_dispatch_review(
+            app_state,
+            action,
+            SimpleNamespace(use_llm=True),
+        )
+    )
+
+    assert payload == {"repository": "owner/repo", "agent_instructions": "AI"}
+    assert llm_used is True
+    assert fallback_reason is None

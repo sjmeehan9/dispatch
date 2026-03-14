@@ -131,6 +131,58 @@ def _save_edited_payload(action: Action, new_payload_json: str) -> bool:
     return True
 
 
+def _is_llm_dispatch_enabled(app_state: AppState, executor_config: object) -> bool:
+    """Return whether LLM payload generation should be used for dispatch flow."""
+
+    use_llm = bool(getattr(executor_config, "use_llm", False))
+    return use_llm and app_state.llm_service.is_available()
+
+
+def _resolve_standard_payload_for_action(
+    app_state: AppState,
+    action: Action,
+    executor_config: object,
+) -> dict[str, object]:
+    """Resolve action payload via deterministic variable interpolation."""
+
+    if app_state.current_project is None:
+        raise ValueError("No project loaded.")
+
+    context = app_state.payload_resolver.build_context(
+        project=app_state.current_project,
+        phase_id=action.phase_id,
+        component_id=action.component_id,
+        executor_config=executor_config,
+    )
+    return app_state.payload_resolver.resolve_payload(action.payload, context).payload
+
+
+async def _prepare_payload_for_dispatch_review(
+    app_state: AppState,
+    action: Action,
+    executor_config: object,
+) -> tuple[dict[str, object], bool, str | None]:
+    """Build payload for review, optionally using LLM generation before dispatch."""
+
+    if app_state.current_project is None:
+        raise ValueError("No project loaded.")
+
+    if not bool(getattr(executor_config, "use_llm", False)):
+        return (
+            _resolve_standard_payload_for_action(app_state, action, executor_config),
+            False,
+            None,
+        )
+
+    result = await asyncio.to_thread(
+        app_state.llm_payload_generator.generate_payload,
+        action,
+        app_state.current_project,
+        executor_config,
+    )
+    return result.payload, result.llm_used, result.fallback_reason
+
+
 def _insert_debug_action(app_state: AppState, phase_id: int, position: int) -> None:
     """Insert a debug action into a phase and persist project changes."""
     if app_state.current_project is None:
@@ -197,11 +249,16 @@ def _show_payload_editor(
     action: Action,
     refresh_action_list: Callable[[], None],
     refresh_response_panel: Callable[[], None] | None = None,
+    ai_generated: bool = False,
+    allow_dispatch: bool = False,
+    dispatch_overlay: LoadingOverlay | None = None,
 ) -> None:
     """Open a dialog to view and edit an action payload as JSON."""
     dialog = ui.dialog()
     with dialog, ui.card().classes("q-pa-md dispatch-dialog-card"):
         ui.label("Edit Payload").classes("text-h6")
+        if ai_generated:
+            ui.chip("AI Generated", icon="auto_awesome", color="purple")
         ui.label(
             "Edit the JSON payload. Unresolved variables like {{phase_id}} are listed below."
         ).classes("text-caption text-grey-7")
@@ -259,6 +316,38 @@ def _show_payload_editor(
             ui.button("Save", icon="save", on_click=_save, color="primary").classes(
                 "dispatch-touch-target"
             )
+
+            async def _dispatch() -> None:
+                saved = _save_edited_payload(action, str(editor.value or ""))
+                if not saved:
+                    notify_error("Invalid JSON. Payload must be a JSON object.")
+                    return
+
+                dialog.close()
+                if dispatch_overlay is None:
+                    response = await _dispatch_action(
+                        app_state, project_service, action
+                    )
+                else:
+                    response = await with_loading(
+                        lambda: _dispatch_action(app_state, project_service, action),
+                        dispatch_overlay,
+                    )
+
+                refresh_action_list()
+                if refresh_response_panel is not None:
+                    refresh_response_panel()
+
+                if response is None:
+                    return
+
+            if allow_dispatch:
+                ui.button(
+                    "Dispatch",
+                    icon="send",
+                    on_click=_dispatch,
+                    color="primary",
+                ).classes("dispatch-touch-target")
 
     dialog.open()
 
@@ -358,6 +447,7 @@ def _render_action_list(
     app_state: AppState,
     project_service: ProjectService,
     dispatch_overlay: LoadingOverlay,
+    llm_generation_overlay: LoadingOverlay,
     refresh_response_panel: Callable[[], None] | None = None,
 ) -> None:
     """Render the left-panel phase-grouped action list."""
@@ -502,10 +592,53 @@ def _render_action_list(
     async def _handle_dispatch(action: Action) -> None:
         app_state.dispatching_action_id = action.action_id
         _render_action_list.refresh()
-        await with_loading(
-            lambda: _dispatch_action(app_state, project_service, action),
-            dispatch_overlay,
-        )
+
+        try:
+            executor_config = app_state.config_manager.get_executor_config()
+        except (OSError, ValueError) as exc:
+            notify_error(f"Dispatch failed: {exc}")
+            app_state.dispatching_action_id = None
+            _render_action_list.refresh()
+            return
+
+        if _is_llm_dispatch_enabled(app_state, executor_config):
+            try:
+                payload, llm_used, fallback_reason = await with_loading(
+                    lambda: _prepare_payload_for_dispatch_review(
+                        app_state,
+                        action,
+                        executor_config,
+                    ),
+                    llm_generation_overlay,
+                )
+            except (OSError, ValueError) as exc:
+                notify_error(f"Dispatch failed: {exc}")
+                app_state.dispatching_action_id = None
+                _render_action_list.refresh()
+                return
+
+            action.payload = payload
+            if not llm_used and fallback_reason:
+                notify_warning(
+                    f"LLM generation failed: {fallback_reason}. Using standard payload."
+                )
+
+            _show_payload_editor(
+                app_state,
+                project_service,
+                action,
+                _render_action_list.refresh,
+                refresh_response_panel,
+                ai_generated=llm_used,
+                allow_dispatch=True,
+                dispatch_overlay=dispatch_overlay,
+            )
+        else:
+            await with_loading(
+                lambda: _dispatch_action(app_state, project_service, action),
+                dispatch_overlay,
+            )
+
         app_state.dispatching_action_id = None
         _render_action_list.refresh()
         if refresh_response_panel is not None:
@@ -708,6 +841,10 @@ def render_main_screen(app_state: AppState, project_id: str) -> None:
 
     save_overlay = loading_overlay("Saving project...", ui_module=ui)
     dispatch_overlay = loading_overlay("Dispatching action...", ui_module=ui)
+    llm_generation_overlay = loading_overlay(
+        "Generating payload with AI...",
+        ui_module=ui,
+    )
 
     def _go_home() -> None:
         app_state.clear_project()
@@ -755,6 +892,7 @@ def render_main_screen(app_state: AppState, project_id: str) -> None:
                         app_state,
                         project_service,
                         dispatch_overlay,
+                        llm_generation_overlay,
                         refresh_response_panel=_render_response_panel.refresh,
                     )
 

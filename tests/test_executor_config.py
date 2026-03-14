@@ -23,7 +23,8 @@ class _FakeContext:
     def classes(self, _: str) -> _FakeContext:
         return self
 
-    def props(self, _: str) -> _FakeContext:
+    def props(self, value: str) -> _FakeContext:
+        self._last_props = value
         return self
 
 
@@ -78,6 +79,7 @@ class _FakeUI:
         self.inputs: dict[str, _FakeInput] = {}
         self.buttons: dict[str, _FakeButton] = {}
         self.notifications: list[tuple[str, str | None]] = []
+        self.switches: dict[str, _FakeInput] = {}
         self.navigate = _FakeNavigate()
 
     def column(self) -> _FakeContext:
@@ -106,6 +108,12 @@ class _FakeUI:
         self.inputs[label] = control
         return control
 
+    def switch(self, label: str, value: bool = False) -> _FakeInput:
+        control = _FakeInput(label=label, value=str(value), validation=None)
+        control.value = value
+        self.switches[label] = control
+        return control
+
     def button(
         self,
         label: str | None = None,
@@ -122,12 +130,16 @@ class _FakeUI:
     def separator(self) -> _FakeContext:
         return _FakeContext()
 
+    def tooltip(self, _: str) -> _FakeContext:
+        return _FakeContext()
+
     def notify(self, message: str, type: str | None = None) -> None:
         self.notifications.append((message, type))
 
 
 def _build_app_state(
     tmp_path: Path,
+    llm_available: bool = True,
 ) -> tuple[SimpleNamespace, list[ExecutorConfig], dict[str, int]]:
     """Build a fake app_state with save capture and reload counter."""
     saves: list[ExecutorConfig] = []
@@ -153,6 +165,7 @@ def _build_app_state(
             get_executor_config=lambda: existing,
             save_executor_config=_save,
         ),
+        llm_service=SimpleNamespace(is_available=lambda: llm_available),
         reload_config=_reload,
     )
     return app_state, saves, reload_calls
@@ -215,6 +228,7 @@ def test_render_executor_config_saves_valid_values(
     fake_ui.inputs["API Endpoint URL"].value = "https://api.example.com/dispatch"
     fake_ui.inputs["API Key Environment Variable"].value = "EXTERNAL_API_KEY"
     fake_ui.inputs["Webhook URL (optional)"].value = "https://callback.example.com/run"
+    fake_ui.switches["Use LLM for payload generation"].value = True
 
     fake_ui.buttons["Save"].click()
 
@@ -222,8 +236,33 @@ def test_render_executor_config_saves_valid_values(
     assert saves[0].executor_id == "my-executor"
     assert saves[0].executor_name == "My Executor"
     assert saves[0].api_key_env_key == "EXTERNAL_API_KEY"
+    assert saves[0].use_llm is True
     assert reload_calls["count"] == 1
     assert fake_ui.notifications[-1] == ("Executor configuration saved", "positive")
+
+
+def test_render_executor_config_disables_llm_toggle_without_api_key(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """LLM toggle should be disabled when OpenAI API key is unavailable."""
+    fake_ui = _FakeUI()
+    monkeypatch.setattr(executor_config, "ui", fake_ui)
+    monkeypatch.setattr(
+        executor_config,
+        "notify_error",
+        lambda message: fake_ui.notify(message, "negative"),
+    )
+    monkeypatch.setattr(
+        executor_config,
+        "notify_success",
+        lambda message: fake_ui.notify(message, "positive"),
+    )
+    app_state, _, _ = _build_app_state(tmp_path, llm_available=False)
+
+    executor_config.render_executor_config(app_state)
+
+    llm_switch = fake_ui.switches["Use LLM for payload generation"]
+    assert "disable" in getattr(llm_switch, "_last_props", "")
 
 
 def test_render_executor_config_rejects_invalid_endpoint_url(
