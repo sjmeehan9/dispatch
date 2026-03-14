@@ -83,6 +83,17 @@ def test_secrets_route_renders_form(main_module: ModuleType) -> None:
     assert "Autopilot API Key" in response.text
 
 
+def test_link_project_route_renders_form(main_module: ModuleType) -> None:
+    """Link project route should render expected form labels."""
+    with TestClient(main_module.app) as client:
+        response = client.get("/project/link")
+
+    assert response.status_code == 200
+    assert "Link New Project" in response.text
+    assert "GitHub Repository" in response.text
+    assert "Scan &amp; Link" in response.text
+
+
 def test_webhook_callback_stores_payload(main_module: ModuleType) -> None:
     """Webhook callback should persist payload data to WebhookService."""
     payload = {"run_id": "run-123", "status": "completed"}
