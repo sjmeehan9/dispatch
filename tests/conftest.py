@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 import pytest
 
@@ -43,7 +42,7 @@ def tmp_data_dir(tmp_path_factory: pytest.TempPathFactory) -> Path:
 
 
 @pytest.fixture
-def mock_env(monkeypatch: pytest.MonkeyPatch, tmp_data_dir: Path) -> dict[str, Any]:
+def mock_env(monkeypatch: pytest.MonkeyPatch, tmp_data_dir: Path) -> dict[str, str]:
     """Provide a standard isolated environment variable set for tests."""
 
     values: dict[str, str] = {
