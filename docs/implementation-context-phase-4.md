@@ -59,3 +59,37 @@
 
 ### Deviations
 - None.
+
+## Component 4.3 - Executor Configuration Screen
+- Implemented `render_executor_config(app_state)` in `app/src/ui/executor_config.py`.
+- Built a full executor configuration form at `/config/executor` with fields for:
+  - Executor Name
+  - API Endpoint URL
+  - API Key Environment Variable
+  - Webhook URL (optional)
+- Added inline input validation using NiceGUI `validation` callbacks:
+  - Required checks for executor name, API endpoint, and API key env var.
+  - URL format checks (`http://` or `https://`) for API endpoint and optional webhook.
+- Added save workflow:
+  - Validates inputs before save and shows negative notifications for invalid fields.
+  - Builds an `ExecutorConfig` model and persists it through `ConfigManager.save_executor_config`.
+  - Reloads application config via `app_state.reload_config()` after successful save.
+  - Shows positive notification after successful persistence.
+- Added pre-population behavior:
+  - Loads existing config values when `executor.json` is already persisted.
+  - Falls back to defaults (`autopilot`, `AUTOPILOT_API_KEY`, empty URLs) when no file exists yet.
+- Added executor ID derivation from executor name to keep persisted IDs stable and URL-safe.
+- Added navigation control:
+  - "Back to Home" button routes users to `/`.
+- Updated route wiring in `app/src/main.py`:
+  - Replaced `/config/executor` placeholder label with `render_executor_config(app_state)`.
+- Added focused tests:
+  - `tests/test_executor_config.py` for pre-populate, valid save, validation failure, and back navigation.
+  - `tests/test_main.py` route-content assertion for executor config form labels.
+
+### Decisions
+- Kept API key handling as env-var *name only* in UI/model, preserving the security boundary (no key values stored in executor config JSON).
+- Avoided introducing any repository dependency on `.env/.env.local`; screen persists only non-secret config metadata.
+
+### Deviations
+- None.
