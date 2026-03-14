@@ -7,6 +7,7 @@ from pathlib import Path
 
 import yaml
 
+from app.src.config import ACTION_DEFAULTS_FILENAME
 from app.src.config.settings import Settings
 from app.src.models import ActionTypeDefaults, ExecutorConfig
 from app.src.services.config_manager import ConfigManager
@@ -73,6 +74,18 @@ def test_get_executor_config_loads_defaults_when_missing(tmp_path, monkeypatch) 
 
     assert loaded.executor_id == "autopilot"
     assert (settings.config_dir / "executor.json").exists()
+
+
+def test_get_action_type_defaults_loads_defaults_when_missing(
+    tmp_path, monkeypatch
+) -> None:
+    settings = _build_settings(monkeypatch, tmp_path)
+    manager = ConfigManager(settings)
+
+    loaded = manager.get_action_type_defaults()
+
+    assert loaded.implement["role"] == "implement"
+    assert (settings.config_dir / ACTION_DEFAULTS_FILENAME).exists()
 
 
 def test_set_secret_writes_and_updates_secret_value(tmp_path, monkeypatch) -> None:

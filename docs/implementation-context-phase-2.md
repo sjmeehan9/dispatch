@@ -68,3 +68,18 @@
 
 ### Deviations
 - None.
+
+## Component 2.5 - Unit Tests, Validation & Phase Documentation
+- Expanded Phase 2 validation coverage in `tests/test_models.py`, `tests/test_settings.py`, and `tests/test_config_manager.py` to verify model integrity, settings behavior, and config/secrets persistence flows required by Components 2.1–2.4.
+- Added explicit default-bootstrap test coverage for action template config loading when persisted files are absent to confirm first-run behavior remains reliable.
+- Confirmed secret resolution behavior for both local env keys and GitHub Actions naming constraints (`TOKEN` alias for runtime `GITHUB_TOKEN` lookup).
+- Executed quality gates for this phase scope: `pytest -q --cov=app/src --cov-report=term-missing`, `black --check app/src/`, `isort --check-only app/src/`, and `python scripts/evals.py`.
+- Added component overview documentation at `docs/components/phase-2-component-2-5-overview.md` for future technical reference.
+
+### Decisions
+- Kept tests isolated with temporary directories and patched env paths to avoid mutating real `~/.dispatch` or committed `.env` artifacts.
+- Validated E2E preconditions structurally through model + action-type coverage for all five workflow action categories (implement/test/review/document/debug).
+- Preserved local-first secret file handling while documenting/validating CI usage of repository/environment secrets and token aliasing.
+
+### Deviations
+- Validation ran in this sandbox with Python 3.12 due unavailable Python 3.13 runtime; all required checks still pass for the implemented scope.
