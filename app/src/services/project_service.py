@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import logging
 import os
-import re
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -14,6 +13,12 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from app.src.config.constants import (
+    CLAUDE_AGENTS_PATH,
+    GITHUB_AGENTS_PATH,
+    PHASE_PROGRESS_PATH,
+    REPOSITORY_PATTERN,
+)
 from app.src.config.settings import Settings
 from app.src.models import PhaseData, Project
 from app.src.services.github_client import (
@@ -24,9 +29,7 @@ from app.src.services.github_client import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-_REPOSITORY_PATTERN = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
-_PHASE_PROGRESS_PATH = "docs/phase-progress.json"
-_AGENT_DIRECTORIES: tuple[str, str] = (".claude/agents/", ".github/agents/")
+_AGENT_DIRECTORIES: tuple[str, str] = (CLAUDE_AGENTS_PATH, GITHUB_AGENTS_PATH)
 _REQUIRED_PHASE_FIELDS = ("phaseId", "phaseName", "components")
 
 
@@ -142,10 +145,20 @@ class ProjectService:
 
         try:
             payload = json.loads(project_path.read_text(encoding="utf-8"))
-            project = Project.model_validate(payload)
+        except json.JSONDecodeError as exc:
+            raise ProjectNotFoundError(
+                f"Project {project_id} has invalid JSON: {exc.msg}"
+            ) from exc
         except (PermissionError, OSError) as exc:
             raise OSError(
                 f"Failed to load project '{project_id}' from '{project_path}': {exc}"
+            ) from exc
+
+        try:
+            project = Project.model_validate(payload)
+        except ValidationError as exc:
+            raise ProjectNotFoundError(
+                f"Project {project_id} has invalid data: {exc}"
             ) from exc
         _LOGGER.info("Loaded project %s", project_id)
         return project
@@ -219,7 +232,7 @@ class ProjectService:
         """
 
         repository_value = repository.strip()
-        if not _REPOSITORY_PATTERN.match(repository_value):
+        if not REPOSITORY_PATTERN.match(repository_value):
             raise ProjectLinkError(
                 "Repository must match owner/repo format using only letters, "
                 "numbers, dot, underscore, or hyphen."
@@ -244,7 +257,7 @@ class ProjectService:
         repository = f"{owner}/{repo}"
         try:
             raw_content = self._github_client.get_file_contents(
-                owner, repo, _PHASE_PROGRESS_PATH
+                owner, repo, PHASE_PROGRESS_PATH
             )
         except GitHubNotFoundError as exc:
             raise ProjectLinkError(
