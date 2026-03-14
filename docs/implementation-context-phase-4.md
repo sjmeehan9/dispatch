@@ -126,3 +126,35 @@
 
 ### Deviations
 - Validation and test execution ran on Python 3.12 in this sandbox; project target remains Python 3.13+.
+
+## Component 4.5 - Link New Project Screen
+- Implemented `render_link_project(app_state)` and async `_scan_and_link(...)` in `app/src/ui/link_project.py`.
+- Added full `/project/link` UI with:
+  - Repository input (`owner/repo` format validation)
+  - Token env-var input (default `GITHUB_TOKEN`)
+  - Helper guidance for GitHub repository/environment secrets and `TOKEN` alias usage in GitHub Actions
+  - Visible spinner during scan/link operations
+  - Inline result area for success summaries and actionable errors
+- Integrated project-link workflow to existing services:
+  - Reads token via `Settings.get_secret(...)`
+  - Links/scans repository via token-bound `ProjectService`
+  - Generates actions via `ActionGenerator.generate_actions(...)`
+  - Resolves initial payload templates via `PayloadResolver`
+  - Persists linked project via `ProjectService.save_project(...)`
+  - Sets `app_state.current_project` and navigates to `/project/{project_id}` on success
+- Added error normalization to ensure required user-facing messages for:
+  - Missing `docs/phase-progress.json`
+  - Authentication failures
+- Updated route wiring in `app/src/main.py`:
+  - `/project/link` now renders `render_link_project(app_state)` instead of a placeholder label
+- Added focused tests in `tests/test_link_project.py` for:
+  - Successful scan/link + action generation/payload resolution/save flow
+  - Missing token error path
+  - Error message normalization behavior
+
+### Decisions
+- Executed network/file-bound link and save operations via `run.io_bound(...)` so UI remains responsive while scanning.
+- Kept token handling secret-safe by reading env values at runtime only; UI stores env key names, never secret values.
+
+### Deviations
+- Updated guidance/error text to prioritize GitHub Secrets usage (repository/environment secrets and `TOKEN` alias) rather than requiring `.env/.env.local` in remote contexts.
