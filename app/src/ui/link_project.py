@@ -97,9 +97,9 @@ def render_link_project(app_state: AppState) -> None:
                 "GitHub Actions uses TOKEN as alias)."
             ).classes("text-caption text-grey-7")
 
-            spinner_row = ui.row().classes("items-center q-gutter-sm")
-            ui.spinner(size="sm")
-            ui.label("Scanning repository...")
+            with ui.row().classes("items-center q-gutter-sm") as spinner_row:
+                ui.spinner(size="sm")
+                ui.label("Scanning repository...")
             spinner_row.set_visibility(False)
 
             result_label = ui.label("").classes("text-body2")
