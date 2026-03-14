@@ -16,3 +16,20 @@
 
 ### Deviations
 - None.
+
+## Component 2.2 - Application Settings Module
+- Implemented configuration constants in `app/src/config/constants.py` covering data directory defaults, config filenames, env file naming, and phase/agent repository paths required by downstream services.
+- Implemented `Settings` in `app/src/config/settings.py` to load environment values via `python-dotenv` from `.env/.env.local` without requiring that file to exist in the repository.
+- Added typed directory properties (`data_dir`, `projects_dir`, `config_dir`) and `env_file_path`, plus `initialise_data_dir()` to create the dispatch data directory tree.
+- Added secure secret resolution through `get_secret(env_key)` with no secret value logging.
+- Added compatibility fallback so `get_secret("GITHUB_TOKEN")` reads `TOKEN` when running in GitHub environments that use restricted secret names.
+- Added lazy singleton accessor `get_settings()` to provide one shared settings instance across modules.
+- Updated `app/src/config/__init__.py` exports so `from app.src.config import Settings, get_settings` and constants imports work directly.
+- Added focused tests in `tests/test_settings.py` validating environment override, default fallback, directory initialization, secret retrieval behavior, and singleton semantics.
+
+### Decisions
+- Kept `.env/.env.local` as a local runtime path reference while treating it as optional, preserving local-first behavior and compatibility with CI/repository secrets.
+- Resolved token aliasing in `Settings` instead of duplicating logic across services, keeping secret-key translation centralized.
+
+### Deviations
+- Validation was executed with host Python 3.12 because the repository's Python 3.13 `.venv` is not present in this sandbox; tests passed and formatting checks were run on changed files.
