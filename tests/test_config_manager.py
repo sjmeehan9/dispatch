@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from unittest.mock import patch
 
+import pytest
 import yaml
 
 from app.src.config import ACTION_DEFAULTS_FILENAME
@@ -155,6 +157,40 @@ def test_defaults_yaml_parses_into_required_models() -> None:
     assert executor.executor_id == "autopilot"
     assert executor.webhook_url is None
     assert action_defaults.review["role"] == "review"
+
+
+def test_list_secret_keys_returns_empty_when_env_file_missing(
+    tmp_path, monkeypatch
+) -> None:
+    settings = _build_settings(monkeypatch, tmp_path)
+    manager = ConfigManager(settings)
+
+    assert manager.list_secret_keys() == []
+
+
+def test_list_secret_keys_handles_export_prefix(tmp_path, monkeypatch) -> None:
+    settings = _build_settings(monkeypatch, tmp_path)
+    manager = ConfigManager(settings)
+
+    env_file = settings.env_file_path
+    env_file.parent.mkdir(parents=True, exist_ok=True)
+    env_file.write_text("export MY_TOKEN=abc123\nOTHER_KEY=xyz\n", encoding="utf-8")
+
+    assert manager.list_secret_keys() == ["MY_TOKEN", "OTHER_KEY"]
+
+
+def test_load_defaults_raises_on_malformed_yaml(tmp_path, monkeypatch) -> None:
+    settings = _build_settings(monkeypatch, tmp_path)
+    manager = ConfigManager(settings)
+
+    malformed_defaults = {"unrelated_key": True}
+
+    with patch(
+        "app.src.services.config_manager.yaml.safe_load",
+        return_value=malformed_defaults,
+    ):
+        with pytest.raises(ValueError, match="defaults.yaml must include"):
+            manager.get_executor_config()
 
 
 def test_defaults_yaml_templates_include_required_placeholders() -> None:
