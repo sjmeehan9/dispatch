@@ -171,9 +171,19 @@ class ConfigManager:
         _LOGGER.info("Loading bundled defaults from %s", defaults_path.as_posix())
         raw_defaults = yaml.safe_load(defaults_path.read_text(encoding="utf-8"))
 
+        executor_payload = raw_defaults.get(
+            "executor", raw_defaults.get("executor_config")
+        )
+        action_defaults_payload = raw_defaults.get("action_type_defaults")
+
+        if executor_payload is None or action_defaults_payload is None:
+            raise ValueError(
+                "defaults.yaml must include 'executor' and 'action_type_defaults' keys."
+            )
+
         return (
-            ExecutorConfig.model_validate(raw_defaults["executor_config"]),
-            ActionTypeDefaults.model_validate(raw_defaults["action_type_defaults"]),
+            ExecutorConfig.model_validate(executor_payload),
+            ActionTypeDefaults.model_validate(action_defaults_payload),
         )
 
     @staticmethod

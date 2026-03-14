@@ -1,57 +1,65 @@
-executor_config:
+executor:
   executor_id: autopilot
   executor_name: Autopilot
   api_endpoint: http://localhost:8000/agent/run
   api_key_env_key: AUTOPILOT_API_KEY
-  webhook_url: null
+  webhook_url: ""
+
 action_type_defaults:
+  # Placeholders:
+  # - {{repository}} owner/repo target repository
+  # - {{branch}} target branch (typically main)
+  # - {{phase_id}} phase number
+  # - {{phase_name}} phase display name
+  # - {{component_id}} component identifier (implement)
+  # - {{component_name}} component display name (implement)
+  # - {{component_breakdown_doc}} component breakdown path
+  # - {{agent_paths}} discovered agent paths JSON array
+  # - {{webhook_url}} callback URL
+  # - {{pr_number}} pull request number (review)
   implement:
     repository: "{{repository}}"
     branch: "{{branch}}"
-    role: implement
-    agent_instructions: "Implement Component {{component_id}}"
-    agent_paths:
-      - "{{implement_agent_path}}"
-    model: "{{model}}"
-    callback_url: "{{callback_url}}"
-    timeout_minutes: 20
+    agent_instructions: "Implement {{component_name}} ({{component_id}}) of Phase {{phase_id}}. Follow the component breakdown in {{component_breakdown_doc}}."
+    model: "claude-opus-4.6"
+    role: "implement"
+    agent_paths: "{{agent_paths}}"
+    callback_url: "{{webhook_url}}"
+    timeout_minutes: 30
   test:
     repository: "{{repository}}"
     branch: "{{branch}}"
-    role: test
-    agent_instructions: "Execute tests for Phase {{phase_id}}"
-    agent_paths:
-      - "{{test_agent_path}}"
-    model: "{{model}}"
-    callback_url: "{{callback_url}}"
-    timeout_minutes: 20
+    agent_instructions: "Test Phase {{phase_id}} ({{phase_name}}). Run all tests and validate all components are working correctly."
+    model: "claude-opus-4.6"
+    role: "implement"
+    agent_paths: "{{agent_paths}}"
+    callback_url: "{{webhook_url}}"
+    timeout_minutes: 30
   review:
     repository: "{{repository}}"
     branch: "{{branch}}"
-    role: review
-    agent_instructions: "Review code changes for Phase {{phase_id}}"
-    agent_paths:
-      - "{{review_agent_path}}"
-    model: "{{model}}"
-    callback_url: "{{callback_url}}"
-    timeout_minutes: 20
+    agent_instructions: "Review Phase {{phase_id}} ({{phase_name}}). Check code quality, standards compliance, and correctness."
+    model: "claude-opus-4.6"
+    role: "review"
+    pr_number: "{{pr_number}}"
+    agent_paths: "{{agent_paths}}"
+    callback_url: "{{webhook_url}}"
+    timeout_minutes: 15
   document:
     repository: "{{repository}}"
     branch: "{{branch}}"
-    role: document
-    agent_instructions: "Document completion for Phase {{phase_id}}"
-    agent_paths:
-      - "{{document_agent_path}}"
-    model: "{{model}}"
-    callback_url: "{{callback_url}}"
+    agent_instructions: "Create documentation for Phase {{phase_id}} ({{phase_name}}). Generate the phase summary and update implementation context."
+    model: "claude-opus-4.6"
+    role: "implement"
+    agent_paths: "{{agent_paths}}"
+    callback_url: "{{webhook_url}}"
     timeout_minutes: 20
   debug:
     repository: "{{repository}}"
     branch: "{{branch}}"
-    role: debug
-    agent_instructions: "Diagnose and resolve issue: {{issue_summary}}"
-    agent_paths:
-      - "{{debug_agent_path}}"
-    model: "{{model}}"
-    callback_url: "{{callback_url}}"
-    timeout_minutes: 20
+    agent_instructions: ""
+    model: "claude-opus-4.6"
+    role: "implement"
+    agent_paths: "{{agent_paths}}"
+    callback_url: "{{webhook_url}}"
+    timeout_minutes: 30
