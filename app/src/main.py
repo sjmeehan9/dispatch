@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import Any
 
 from fastapi import HTTPException, Request
@@ -49,6 +50,11 @@ def _ensure_run_config() -> None:
 
 
 _ensure_run_config()
+
+_STATIC_DIR = Path(__file__).resolve().parent / "static"
+if _STATIC_DIR.exists():
+    app.add_static_files("/static", str(_STATIC_DIR))
+    ui.add_head_html('<link rel="stylesheet" href="/static/styles.css">')
 
 
 def _register_global_exception_handler() -> None:

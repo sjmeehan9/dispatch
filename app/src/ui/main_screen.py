@@ -214,7 +214,7 @@ def _show_payload_editor(
 ) -> None:
     """Open a dialog to view and edit an action payload as JSON."""
     dialog = ui.dialog()
-    with dialog, ui.card().classes("q-pa-md").style("width: 900px; max-width: 95vw"):
+    with dialog, ui.card().classes("q-pa-md dispatch-dialog-card"):
         ui.label("Edit Payload").classes("text-h6")
         ui.label(
             "Edit the JSON payload. Unresolved variables like {{phase_id}} are listed below."
@@ -270,7 +270,9 @@ def _show_payload_editor(
                     refresh_response_panel()
 
             ui.button("Cancel", on_click=_cancel).props("outline")
-            ui.button("Save", icon="save", on_click=_save, color="primary")
+            ui.button("Save", icon="save", on_click=_save, color="primary").classes(
+                "dispatch-touch-target"
+            )
 
     dialog.open()
 
@@ -492,7 +494,7 @@ def _show_insert_debug_dialog(
 ) -> None:
     """Open a dialog to choose insertion position for a debug action."""
     dialog = ui.dialog()
-    with dialog, ui.card().classes("q-pa-md").style("width: 420px; max-width: 90vw"):
+    with dialog, ui.card().classes("q-pa-md dispatch-debug-dialog"):
         ui.label(f"Insert Debug Action: Phase {phase_id}").classes("text-h6")
         ui.label(f"Choose a position between 0 and {phase_action_count}.").classes(
             "text-caption text-grey-7"
@@ -526,7 +528,9 @@ def _show_insert_debug_dialog(
                 dialog.close()
 
             ui.button("Cancel", on_click=_cancel).props("outline")
-            ui.button("Insert", icon="add", on_click=_confirm, color="warning")
+            ui.button("Insert", icon="add", on_click=_confirm, color="warning").classes(
+                "dispatch-touch-target"
+            )
 
     dialog.open()
 
@@ -687,18 +691,20 @@ def render_main_screen(app_state: AppState, project_id: str) -> None:
         notify_success("Project saved")
 
     with ui.column().classes("w-full q-pa-md q-gutter-md"):
-        with ui.row().classes("w-full items-center justify-between"):
-            ui.label(app_state.current_project.project_name).classes("text-h4")
+        with ui.row().classes("w-full items-center justify-between wrap q-gutter-sm"):
+            ui.label(app_state.current_project.project_name).classes(
+                "text-h5 md:text-h4"
+            )
             with ui.row().classes("items-center q-gutter-sm"):
-                ui.button("Save", icon="save", on_click=_save_project)
+                ui.button("Save", icon="save", on_click=_save_project).classes(
+                    "dispatch-touch-target"
+                )
 
-        with (
-            ui.splitter(value=40)
-            .classes("w-full")
-            .style("height: calc(100vh - 180px)") as splitter
+        with ui.element("div").classes(
+            "row q-col-gutter-md w-full dispatch-mobile-grid"
         ):
-            with splitter.before:
-                with ui.scroll_area().classes("w-full h-full q-pr-sm"):
+            with ui.element("div").classes("col-12 col-md-5 dispatch-mobile-stack"):
+                with ui.scroll_area().classes("w-full dispatch-panel-scroll"):
                     _render_action_list(
                         app_state,
                         project_service,
@@ -706,8 +712,8 @@ def render_main_screen(app_state: AppState, project_id: str) -> None:
                         refresh_response_panel=_render_response_panel.refresh,
                     )
 
-            with splitter.after:
-                with ui.scroll_area().classes("w-full h-full q-pl-sm"):
+            with ui.element("div").classes("col-12 col-md-7 dispatch-mobile-stack"):
+                with ui.scroll_area().classes("w-full dispatch-panel-scroll"):
                     _render_response_panel(
                         app_state,
                         project_service,

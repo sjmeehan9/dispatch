@@ -84,9 +84,11 @@ def render_link_project(app_state: AppState) -> None:
     link_overlay = loading_overlay("Scanning and linking project...", ui_module=ui)
 
     with ui.column().classes(
-        "items-center mx-auto justify-center q-pa-xl q-gutter-md w-full max-w-xl"
+        "items-center mx-auto justify-center q-pa-md md:q-pa-xl q-gutter-md w-full"
     ):
-        with ui.card().classes("w-full q-pa-md q-gutter-sm"):
+        with ui.card().classes(
+            "w-full col-12 col-md-8 col-lg-6 q-mx-auto q-pa-md q-gutter-sm"
+        ):
             ui.label("Link New Project").classes("text-h5 q-mb-sm")
 
             repo_input = ui.input(
@@ -168,4 +170,6 @@ def render_link_project(app_state: AppState) -> None:
                     ui.navigate.to(f"/project/{project.project_id}")
 
             with ui.row().classes("w-full justify-end q-gutter-sm q-mt-md"):
-                ui.button("Scan & Link", on_click=_handle_scan, color="primary")
+                ui.button(
+                    "Scan & Link", on_click=_handle_scan, color="primary"
+                ).classes("dispatch-touch-target")

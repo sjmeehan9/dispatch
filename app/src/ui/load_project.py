@@ -66,9 +66,11 @@ def render_load_project(app_state: AppState) -> None:
             _project_list.refresh()
 
     with ui.column().classes(
-        "items-center mx-auto justify-center q-pa-xl q-gutter-md w-full max-w-2xl"
+        "items-center mx-auto justify-center q-pa-md md:q-pa-xl q-gutter-md w-full"
     ):
-        with ui.card().classes("w-full q-pa-md q-gutter-sm"):
+        with ui.card().classes(
+            "w-full col-12 col-md-10 col-lg-8 q-mx-auto q-pa-md q-gutter-sm"
+        ):
             ui.label("Load Project").classes("text-h5 q-mb-sm")
 
             @ui.refreshable
@@ -84,7 +86,7 @@ def render_load_project(app_state: AppState) -> None:
                     ui.button(
                         "Link New Project",
                         on_click=lambda: ui.navigate.to("/project/link"),
-                    )
+                    ).classes("dispatch-touch-target")
                     return
 
                 with ui.column().classes("w-full q-gutter-sm"):
@@ -99,7 +101,9 @@ def render_load_project(app_state: AppState) -> None:
                                         on_click=lambda project_id=project.project_id: _load_project(
                                             project_id
                                         ),
-                                    ).props("flat no-caps align=left")
+                                    ).props("flat no-caps align=left").classes(
+                                        "dispatch-touch-target"
+                                    )
                                     ui.label(project.repository).classes(
                                         "text-caption text-grey-8"
                                     )
@@ -119,7 +123,7 @@ def render_load_project(app_state: AppState) -> None:
                                     ):
                                         ui.button(
                                             "Cancel", on_click=confirm_dialog.close
-                                        ).props("flat")
+                                        ).props("flat").classes("dispatch-touch-target")
                                         ui.button(
                                             "Delete",
                                             color="negative",
@@ -127,12 +131,12 @@ def render_load_project(app_state: AppState) -> None:
                                                 dialog.close(),
                                                 _delete_project(project_id),
                                             ),
-                                        )
+                                        ).classes("dispatch-touch-target")
 
                                 ui.button(
                                     icon="delete",
                                     color="negative",
                                     on_click=confirm_dialog.open,
-                                ).props("flat round")
+                                ).props("flat round").classes("dispatch-touch-target")
 
             _project_list()

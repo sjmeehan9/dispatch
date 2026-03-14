@@ -18,9 +18,11 @@ def render_secrets_screen(app_state: AppState) -> None:
     """Render the secrets management screen."""
     page_layout("Manage Secrets", back_url="/", ui_module=ui)
     with ui.column().classes(
-        "items-center mx-auto justify-center q-pa-xl q-gutter-md w-full max-w-xl"
+        "items-center mx-auto justify-center q-pa-md md:q-pa-xl q-gutter-md w-full"
     ):
-        with ui.card().classes("w-full q-pa-md q-gutter-sm"):
+        with ui.card().classes(
+            "w-full col-12 col-md-8 col-lg-6 q-mx-auto q-pa-md q-gutter-sm"
+        ):
             ui.label("Secrets Management").classes("text-h5 q-mb-sm")
             ui.label(
                 "Secrets are stored locally in .env/.env.local and never committed to the repository."
@@ -65,4 +67,6 @@ def render_secrets_screen(app_state: AppState) -> None:
                 notify_success("Secrets saved")
 
             with ui.row().classes("w-full justify-end q-gutter-sm q-mt-md"):
-                ui.button("Save", on_click=_save_secrets, color="primary")
+                ui.button("Save", on_click=_save_secrets, color="primary").classes(
+                    "dispatch-touch-target"
+                )

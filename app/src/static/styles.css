@@ -1,0 +1,77 @@
+/* Dispatch responsive and mobile usability styles */
+
+html,
+body,
+.q-layout,
+.q-page {
+  overflow-x: hidden;
+}
+
+.dispatch-page-header {
+  max-width: 100%;
+}
+
+.dispatch-header-row,
+.dispatch-header-content {
+  min-width: 0;
+}
+
+.dispatch-header-title {
+  min-width: 0;
+  word-break: break-word;
+}
+
+.dispatch-mobile-grid {
+  align-items: stretch;
+}
+
+.dispatch-panel-scroll {
+  max-height: calc(100vh - 220px);
+}
+
+.dispatch-dialog-card {
+  width: 900px;
+  max-width: 95vw;
+}
+
+.dispatch-debug-dialog {
+  width: 420px;
+  max-width: 90vw;
+}
+
+@media (max-width: 1023px) {
+  .dispatch-panel-scroll {
+    max-height: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .dispatch-header-title {
+    font-size: 0.95rem;
+    line-height: 1.25rem;
+  }
+
+  .dispatch-touch-target,
+  .q-btn.dispatch-touch-target,
+  .q-btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .dispatch-mobile-stack {
+    width: 100%;
+  }
+
+  .dispatch-dialog-card {
+    width: 100vw;
+    max-width: 100vw;
+    min-height: 100vh;
+    border-radius: 0;
+    margin: 0;
+  }
+
+  .dispatch-debug-dialog {
+    width: 100%;
+    max-width: 100%;
+  }
+}

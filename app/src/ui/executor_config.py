@@ -54,9 +54,11 @@ def render_executor_config(app_state: AppState) -> None:
 
     page_layout("Configure Executor", back_url="/", ui_module=ui)
     with ui.column().classes(
-        "items-center mx-auto justify-center q-pa-xl q-gutter-md w-full max-w-xl"
+        "items-center mx-auto justify-center q-pa-md md:q-pa-xl q-gutter-md w-full"
     ):
-        with ui.card().classes("w-full q-pa-md q-gutter-sm"):
+        with ui.card().classes(
+            "w-full col-12 col-md-8 col-lg-6 q-mx-auto q-pa-md q-gutter-sm"
+        ):
             ui.label("Executor Configuration").classes("text-h5 q-mb-md")
 
             executor_name = ui.input(
@@ -131,4 +133,6 @@ def render_executor_config(app_state: AppState) -> None:
                 notify_success("Executor configuration saved")
 
             with ui.row().classes("w-full justify-end q-gutter-sm q-mt-md"):
-                ui.button("Save", on_click=_save_config, color="primary")
+                ui.button("Save", on_click=_save_config, color="primary").classes(
+                    "dispatch-touch-target"
+                )

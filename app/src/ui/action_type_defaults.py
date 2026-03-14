@@ -75,16 +75,18 @@ def render_action_type_defaults(app_state: AppState) -> None:
 
     page_layout("Action Type Defaults", back_url="/", ui_module=ui)
     with ui.column().classes(
-        "items-center mx-auto justify-center q-pa-xl q-gutter-md w-full max-w-4xl"
+        "items-center mx-auto justify-center q-pa-md md:q-pa-xl q-gutter-md w-full"
     ):
-        with ui.card().classes("w-full q-pa-md q-gutter-sm"):
+        with ui.card().classes(
+            "w-full col-12 col-md-10 col-lg-8 q-mx-auto q-pa-md q-gutter-sm"
+        ):
             ui.label("Action Type Defaults").classes("text-h5 q-mb-sm")
 
             with ui.expansion("Available Variables", value=False).classes("w-full"):
                 for variable, description in _VARIABLE_HINTS:
                     ui.label(f"{variable} — {description}").classes("text-body2")
 
-            with ui.tabs().classes("w-full") as tabs:
+            with ui.tabs().classes("w-full").props("scrollable") as tabs:
                 tab_controls = {
                     action_type: ui.tab(action_type.title())
                     for action_type in _ACTION_TYPES
@@ -149,4 +151,6 @@ def render_action_type_defaults(app_state: AppState) -> None:
                 notify_success("Action type defaults saved")
 
             with ui.row().classes("w-full justify-end q-gutter-sm q-mt-md"):
-                ui.button("Save", on_click=_save_defaults, color="primary")
+                ui.button("Save", on_click=_save_defaults, color="primary").classes(
+                    "dispatch-touch-target"
+                )

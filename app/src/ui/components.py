@@ -27,9 +27,15 @@ def page_layout(
 ) -> None:
     """Render a consistent page header with breadcrumb-style context."""
     active_ui = ui_module or ui
-    with active_ui.header().classes("bg-white text-primary shadow-2 q-px-md q-py-sm"):
-        with active_ui.row().classes("w-full items-center justify-between no-wrap"):
-            with active_ui.row().classes("items-center q-gutter-sm no-wrap"):
+    with active_ui.header().classes(
+        "bg-white text-primary shadow-2 q-px-md q-py-sm dispatch-page-header"
+    ):
+        with active_ui.row().classes(
+            "w-full items-center justify-between wrap dispatch-header-row"
+        ):
+            with active_ui.row().classes(
+                "items-center q-gutter-sm wrap dispatch-header-content"
+            ):
                 if back_url is not None:
                     active_ui.button(
                         icon="arrow_back",
@@ -38,13 +44,15 @@ def page_layout(
                             if on_back is not None
                             else lambda: active_ui.navigate.to(back_url)
                         ),
-                    ).props("flat round dense")
+                    ).props("flat round").classes("dispatch-touch-target")
                 active_ui.button(
                     "Dispatch",
                     on_click=lambda: active_ui.navigate.to("/"),
-                ).props("flat no-caps")
+                ).props("flat no-caps").classes("dispatch-touch-target")
                 active_ui.separator().props("vertical")
-                active_ui.label(title).classes("text-subtitle1 text-weight-medium")
+                active_ui.label(title).classes(
+                    "text-subtitle1 text-weight-medium dispatch-header-title"
+                )
 
 
 class LoadingOverlay:
@@ -56,7 +64,10 @@ class LoadingOverlay:
         """Build a hidden loading dialog that can be shown and hidden."""
         active_ui = ui_module or ui
         self._dialog = active_ui.dialog().props("persistent")
-        with self._dialog, active_ui.card().classes("q-pa-xl items-center"):
+        with (
+            self._dialog,
+            active_ui.card().classes("q-pa-xl items-center dispatch-loading-dialog"),
+        ):
             active_ui.spinner("dots", size="3rem")
             active_ui.label(message).classes("text-subtitle2 q-mt-md")
 
