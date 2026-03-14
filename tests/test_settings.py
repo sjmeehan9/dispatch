@@ -55,6 +55,11 @@ def test_get_secret_returns_env_value_and_none_for_missing(
 
 
 def test_get_secret_supports_github_token_ci_alias(monkeypatch) -> None:
+    monkeypatch.setattr(
+        Settings,
+        "_resolve_env_file_path",
+        staticmethod(lambda: Path("/tmp/dispatch-test-empty.env")),
+    )
     monkeypatch.delenv("GITHUB_TOKEN", raising=False)
     monkeypatch.setenv("TOKEN", "alias-token")
 

@@ -60,6 +60,44 @@
 ### Deviations
 - None.
 
+## Component 4.7 - Main Screen Layout & Action List
+- Implemented `render_main_screen(app_state, project_id)` in `app/src/ui/main_screen.py`.
+- Added project bootstrap-on-route-load behavior:
+  - Loads project from storage when `current_project` is missing or route `project_id` differs.
+  - Redirects to `/` with clear error notifications when project loading fails.
+- Added main-screen header controls:
+  - Project name display
+  - `Save` button wired to `ProjectService.save_project(...)`
+  - `Home` button wired to `/`
+- Added split-panel workspace using NiceGUI `ui.splitter(value=40)` with:
+  - Left panel: scrollable phase-grouped action list
+  - Right panel: placeholder card reserved for Component 4.8 response rendering
+- Implemented left-panel action rendering:
+  - Grouped by phase with expansion sections (`Phase X: Name`)
+  - Action icon mapping per type (`implement`, `test`, `review`, `document`, `debug`)
+  - Implement-action labels resolve human-friendly component names from phase metadata
+  - Status badges with required colors (`grey`, `blue`, `green`)
+- Implemented dispatch workflow in `_dispatch_action(...)`:
+  - Loads executor config
+  - Builds payload context from project + action + executor settings
+  - Resolves payload placeholders via `PayloadResolver`
+  - Dispatches through `AutopilotExecutor`
+  - Stores normalized executor response on action
+  - Marks action as `dispatched`
+  - Auto-saves updated project state
+- Added per-item loading state while dispatch is in progress using `dispatching_action_id` and refreshable list rendering.
+- Updated route wiring in `app/src/main.py` so `/project/{project_id}` now renders the real main screen module.
+- Added `tests/test_main_screen.py` with focused coverage for:
+  - Phase grouping correctness and in-phase action order preservation
+  - Dispatch path behavior (payload resolution, executor call, status update, response persistence, save call)
+
+### Decisions
+- Reused the same token fallback pattern used in load/link flows (`current project token -> GITHUB_TOKEN -> TOKEN -> local-project-access`) for local project file operations.
+- Kept response panel implementation intentionally minimal in this component per phase scope, with an explicit placeholder for Component 4.8.
+
+### Deviations
+- None.
+
 ## Component 4.3 - Executor Configuration Screen
 - Implemented `render_executor_config(app_state)` in `app/src/ui/executor_config.py`.
 - Built a full executor configuration form at `/config/executor` with fields for:

@@ -13,6 +13,7 @@ from app.src.ui.executor_config import render_executor_config
 from app.src.ui.initial_screen import render_initial_screen
 from app.src.ui.link_project import render_link_project
 from app.src.ui.load_project import render_load_project
+from app.src.ui.main_screen import render_main_screen
 from app.src.ui.secrets_screen import render_secrets_screen
 from app.src.ui.state import AppState
 
@@ -85,8 +86,8 @@ def load_project_page() -> None:
 
 @ui.page("/project/{project_id}")
 def main_project_page(project_id: str) -> None:
-    """Render the main project route placeholder."""
-    ui.label(f"Project route: {project_id}")
+    """Render the main project screen."""
+    render_main_screen(app_state, project_id)
 
 
 @app.post("/webhook/callback")
