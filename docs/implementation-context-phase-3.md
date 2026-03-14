@@ -19,3 +19,28 @@
 
 ### Deviations
 - Validation ran in a Python 3.12 sandbox (project targets 3.13); checks were executed with installed tooling and passed for the updated scope.
+
+## Component 3.2 - Project Service: Linking & Scanning
+- Implemented `ProjectService` and `ProjectLinkError` in `app/src/services/project_service.py` for the repository-linking workflow.
+- Added strict repository validation for `owner/repo` format via regex and explicit, user-facing errors.
+- Implemented `link_project(repository, token_env_key)` orchestration to:
+  - validate repository and token env key presence,
+  - verify token availability using `Settings.get_secret()` (supports `GITHUB_TOKEN`/`TOKEN` aliasing),
+  - fetch and parse `docs/phase-progress.json`,
+  - parse phase/component structures into `PhaseData` models,
+  - discover agent files under `.claude/agents/` and `.github/agents/`,
+  - return a populated `Project` model with UUID, timestamps, and empty actions list.
+- Added robust phase-progress validation with descriptive errors for missing `phases`, missing phase fields, missing component fields, and non-object entries.
+- Mapped GitHub client failures to domain-level errors:
+  - `GitHubNotFoundError` → required file missing message,
+  - `GitHubAuthError` → authentication failure message.
+- Added INFO-level link summary logging: phases count, component count, and agent file count.
+- Updated `app/src/services/__init__.py` exports to include `ProjectService` and `ProjectLinkError`.
+- Added focused unit tests in `tests/test_project_service.py` covering success flow, invalid repository, missing/unauthorized phase-progress, camelCase mapping, and agent directory discovery behavior.
+
+### Decisions
+- Kept linking concerns isolated from persistence concerns to align with Component 3.2 scope; CRUD remains for Component 3.3.
+- Required token env key resolution during link to fail fast when secrets are not configured in local env or CI secret mapping.
+
+### Deviations
+- Could not execute the full validation toolchain in this sandbox because Python 3.13 and pre-provisioned venv tooling were unavailable; implementation remains aligned with CI runtime expectations.
