@@ -32,6 +32,7 @@ class AppState:
         self.last_dispatched_action = None
         self.dispatching_action_id: str | None = None
         self.completing_action_id: str | None = None
+        self.selected_phase_filter_phase_id: int | None = None
         self.navigation_stack: list[str] = []
 
     def get_github_client(self, token: str) -> GitHubClient:
@@ -87,6 +88,7 @@ class AppState:
         self.last_dispatched_action = None
         self.dispatching_action_id = None
         self.completing_action_id = None
+        self.selected_phase_filter_phase_id = None
 
     def ensure_project(self, project_id: str) -> Project | None:
         """Return the requested project from memory or disk, otherwise redirect home."""

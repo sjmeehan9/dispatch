@@ -165,10 +165,14 @@ def test_render_executor_config_prepopulates_existing_values(
     fake_ui = _FakeUI()
     monkeypatch.setattr(executor_config, "ui", fake_ui)
     monkeypatch.setattr(
-        executor_config, "notify_error", lambda message: fake_ui.notify(message, "negative")
+        executor_config,
+        "notify_error",
+        lambda message: fake_ui.notify(message, "negative"),
     )
     monkeypatch.setattr(
-        executor_config, "notify_success", lambda message: fake_ui.notify(message, "positive")
+        executor_config,
+        "notify_success",
+        lambda message: fake_ui.notify(message, "positive"),
     )
 
     app_state, _, _ = _build_app_state(tmp_path)
@@ -195,10 +199,14 @@ def test_render_executor_config_saves_valid_values(
     fake_ui = _FakeUI()
     monkeypatch.setattr(executor_config, "ui", fake_ui)
     monkeypatch.setattr(
-        executor_config, "notify_error", lambda message: fake_ui.notify(message, "negative")
+        executor_config,
+        "notify_error",
+        lambda message: fake_ui.notify(message, "negative"),
     )
     monkeypatch.setattr(
-        executor_config, "notify_success", lambda message: fake_ui.notify(message, "positive")
+        executor_config,
+        "notify_success",
+        lambda message: fake_ui.notify(message, "positive"),
     )
     app_state, saves, reload_calls = _build_app_state(tmp_path)
 
@@ -225,10 +233,14 @@ def test_render_executor_config_rejects_invalid_endpoint_url(
     fake_ui = _FakeUI()
     monkeypatch.setattr(executor_config, "ui", fake_ui)
     monkeypatch.setattr(
-        executor_config, "notify_error", lambda message: fake_ui.notify(message, "negative")
+        executor_config,
+        "notify_error",
+        lambda message: fake_ui.notify(message, "negative"),
     )
     monkeypatch.setattr(
-        executor_config, "notify_success", lambda message: fake_ui.notify(message, "positive")
+        executor_config,
+        "notify_success",
+        lambda message: fake_ui.notify(message, "positive"),
     )
     app_state, saves, reload_calls = _build_app_state(tmp_path)
 
@@ -251,10 +263,14 @@ def test_render_executor_config_back_button_navigates_home(
     fake_ui = _FakeUI()
     monkeypatch.setattr(executor_config, "ui", fake_ui)
     monkeypatch.setattr(
-        executor_config, "notify_error", lambda message: fake_ui.notify(message, "negative")
+        executor_config,
+        "notify_error",
+        lambda message: fake_ui.notify(message, "negative"),
     )
     monkeypatch.setattr(
-        executor_config, "notify_success", lambda message: fake_ui.notify(message, "positive")
+        executor_config,
+        "notify_success",
+        lambda message: fake_ui.notify(message, "positive"),
     )
     app_state, _, _ = _build_app_state(tmp_path)
 

@@ -7,6 +7,7 @@ from typing import TypeVar
 
 from nicegui import ui
 
+from app.src.models import Action, ActionStatus, ActionType
 from app.src.services import (
     ExecutorAuthError,
     ExecutorConnectionError,
@@ -17,6 +18,20 @@ from app.src.services import (
 )
 
 T = TypeVar("T")
+
+_ACTION_TYPE_ICON_MAP: dict[str, tuple[str, str]] = {
+    ActionType.IMPLEMENT.value: ("code", "primary"),
+    ActionType.TEST.value: ("science", "purple"),
+    ActionType.REVIEW.value: ("rate_review", "orange"),
+    ActionType.DOCUMENT.value: ("description", "teal"),
+    ActionType.DEBUG.value: ("bug_report", "red"),
+}
+
+_ACTION_STATUS_BADGE_MAP: dict[str, tuple[str, str]] = {
+    ActionStatus.NOT_STARTED.value: ("Pending", "grey"),
+    ActionStatus.DISPATCHED.value: ("Dispatched", "blue"),
+    ActionStatus.COMPLETED.value: ("Complete", "green"),
+}
 
 
 def page_layout(
@@ -122,6 +137,80 @@ def map_executor_error(exc: Exception) -> str:
     if isinstance(exc, ExecutorDispatchError):
         return f"Executor error ({exc.status_code}): {exc.message}"
     return f"Dispatch error: {exc}"
+
+
+def action_type_icon(action_type: ActionType | str) -> tuple[str, str]:
+    """Return the icon name and color class for an action type."""
+    action_type_value = str(action_type)
+    return _ACTION_TYPE_ICON_MAP.get(action_type_value, ("play_arrow", "grey-7"))
+
+
+def action_status_presentation(status: ActionStatus | str) -> tuple[str, str]:
+    """Return badge label and color for an action status."""
+    status_value = str(status)
+    return _ACTION_STATUS_BADGE_MAP.get(status_value, ("Pending", "grey"))
+
+
+def action_status_badge(
+    status: ActionStatus | str,
+    ui_module: object | None = None,
+) -> object:
+    """Render a standardized status badge and return the created badge element."""
+    active_ui = ui_module or ui
+    label, color = action_status_presentation(status)
+    return active_ui.badge(label).props(f'color="{color}" text-color="white"')
+
+
+def progress_counts(actions: list[Action]) -> tuple[int, int, float]:
+    """Calculate completed and total action counts and completion ratio."""
+    total = len(actions)
+    completed = sum(1 for action in actions if action.status == ActionStatus.COMPLETED)
+    ratio = completed / total if total > 0 else 0.0
+    return completed, total, ratio
+
+
+def progress_summary(actions: list[Action], ui_module: object | None = None) -> None:
+    """Render completion summary text and progress bar for an action list."""
+    active_ui = ui_module or ui
+    completed, total, ratio = progress_counts(actions)
+    active_ui.label(f"{completed} of {total} actions complete").classes(
+        "text-subtitle2 text-weight-medium"
+    )
+    active_ui.linear_progress(value=ratio).props("color=primary stripe rounded")
+
+
+def confirm_redispatch(
+    action: Action,
+    on_confirm: Callable[[], None],
+    ui_module: object | None = None,
+) -> object:
+    """Create a confirmation dialog for redispatching an already-processed action."""
+    active_ui = ui_module or ui
+    dialog = active_ui.dialog()
+    with dialog, active_ui.card().classes("q-pa-md q-gutter-md"):
+        active_ui.label("Confirm Re-dispatch").classes("text-h6")
+        active_ui.label(
+            f"This action has already been {str(action.status).replace('_', ' ')}. Re-dispatch?"
+        ).classes("text-body2")
+
+        with active_ui.row().classes("w-full justify-end q-gutter-sm"):
+
+            def _cancel() -> None:
+                dialog.close()
+
+            def _confirm() -> None:
+                dialog.close()
+                on_confirm()
+
+            active_ui.button("Cancel", on_click=_cancel).props("outline")
+            active_ui.button(
+                "Re-dispatch",
+                icon="send",
+                on_click=_confirm,
+                color="warning",
+            )
+
+    return dialog
 
 
 async def with_loading(

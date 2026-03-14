@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from types import SimpleNamespace
 
-from app.src.ui import components
+from app.src.models import Action, ActionStatus, ActionType
 from app.src.services import (
     ExecutorAuthError,
     ExecutorConnectionError,
@@ -14,6 +14,7 @@ from app.src.services import (
     GitHubNotFoundError,
     GitHubRateLimitError,
 )
+from app.src.ui import components
 
 
 class _FakeContext:
@@ -62,6 +63,8 @@ class _FakeUI:
         self.navigate = _FakeNavigate()
         self.labels: list[str] = []
         self.notifications: list[tuple[str, str, bool, int]] = []
+        self.badges: list[str] = []
+        self.progress_values: list[float] = []
 
     def header(self) -> _FakeContext:
         return _FakeContext()
@@ -104,6 +107,14 @@ class _FakeUI:
         timeout: int = 0,
     ) -> None:
         self.notifications.append((message, type, close_button, timeout))
+
+    def badge(self, text: str) -> _FakeContext:
+        self.badges.append(text)
+        return _FakeContext()
+
+    def linear_progress(self, value: float) -> _FakeContext:
+        self.progress_values.append(value)
+        return _FakeContext()
 
 
 def test_page_layout_renders_without_error() -> None:
@@ -191,9 +202,98 @@ def test_map_executor_error_returns_expected_messages() -> None:
     assert components.map_executor_error(ExecutorAuthError("unauthorized")) == (
         "Executor API key rejected. Check your API key in Manage Secrets."
     )
-    assert components.map_executor_error(
-        ExecutorDispatchError(status_code=500, message="internal failure")
-    ) == "Executor error (500): internal failure"
+    assert (
+        components.map_executor_error(
+            ExecutorDispatchError(status_code=500, message="internal failure")
+        )
+        == "Executor error (500): internal failure"
+    )
     assert components.map_executor_error(Exception("socket closed")) == (
         "Dispatch error: socket closed"
     )
+
+
+def test_action_type_icon_returns_expected_icon_and_color() -> None:
+    """Action type icon helper should map each action type to expected values."""
+    assert components.action_type_icon(ActionType.IMPLEMENT) == ("code", "primary")
+    assert components.action_type_icon(ActionType.TEST) == ("science", "purple")
+    assert components.action_type_icon(ActionType.REVIEW) == ("rate_review", "orange")
+    assert components.action_type_icon(ActionType.DOCUMENT) == ("description", "teal")
+    assert components.action_type_icon(ActionType.DEBUG) == ("bug_report", "red")
+
+
+def test_action_status_presentation_returns_expected_label_and_color() -> None:
+    """Status presentation helper should map statuses to badge labels and colors."""
+    assert components.action_status_presentation(ActionStatus.NOT_STARTED) == (
+        "Pending",
+        "grey",
+    )
+    assert components.action_status_presentation(ActionStatus.DISPATCHED) == (
+        "Dispatched",
+        "blue",
+    )
+    assert components.action_status_presentation(ActionStatus.COMPLETED) == (
+        "Complete",
+        "green",
+    )
+
+
+def test_action_status_badge_renders_expected_badge_text() -> None:
+    """Status badge helper should render a badge with expected text."""
+    fake_ui = _FakeUI()
+
+    components.action_status_badge(ActionStatus.DISPATCHED, ui_module=fake_ui)
+
+    assert fake_ui.badges == ["Dispatched"]
+
+
+def test_progress_counts_calculates_completion_ratio() -> None:
+    """Progress count helper should calculate completed/total and ratio correctly."""
+    actions = [
+        Action(
+            action_id="a1",
+            phase_id=1,
+            action_type=ActionType.IMPLEMENT,
+            payload={},
+            status=ActionStatus.COMPLETED,
+        ),
+        Action(
+            action_id="a2",
+            phase_id=1,
+            action_type=ActionType.TEST,
+            payload={},
+            status=ActionStatus.NOT_STARTED,
+        ),
+    ]
+
+    completed, total, ratio = components.progress_counts(actions)
+
+    assert completed == 1
+    assert total == 2
+    assert ratio == 0.5
+
+
+def test_progress_summary_renders_label_and_progress_value() -> None:
+    """Progress summary should render completion label and linear progress value."""
+    fake_ui = _FakeUI()
+    actions = [
+        Action(
+            action_id="a1",
+            phase_id=1,
+            action_type=ActionType.IMPLEMENT,
+            payload={},
+            status=ActionStatus.COMPLETED,
+        ),
+        Action(
+            action_id="a2",
+            phase_id=1,
+            action_type=ActionType.TEST,
+            payload={},
+            status=ActionStatus.NOT_STARTED,
+        ),
+    ]
+
+    components.progress_summary(actions, ui_module=fake_ui)
+
+    assert "1 of 2 actions complete" in fake_ui.labels
+    assert fake_ui.progress_values == [0.5]

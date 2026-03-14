@@ -16,9 +16,8 @@ from app.src.models import (
     Project,
     ResolvedPayload,
 )
-from app.src.services import ActionGenerator, PayloadResolver
+from app.src.services import ActionGenerator, ExecutorConnectionError, PayloadResolver
 from app.src.ui import main_screen
-from app.src.services import ExecutorConnectionError
 
 
 class _FakeRun:
@@ -44,13 +43,17 @@ class _FakeUI:
 def _patch_notifications(monkeypatch, fake_ui: _FakeUI) -> None:
     """Route centralized notification helpers into the fake UI collector."""
     monkeypatch.setattr(
-        main_screen, "notify_success", lambda message: fake_ui.notify(message, "positive")
+        main_screen,
+        "notify_success",
+        lambda message: fake_ui.notify(message, "positive"),
     )
     monkeypatch.setattr(
         main_screen, "notify_error", lambda message: fake_ui.notify(message, "negative")
     )
     monkeypatch.setattr(
-        main_screen, "notify_warning", lambda message: fake_ui.notify(message, "warning")
+        main_screen,
+        "notify_warning",
+        lambda message: fake_ui.notify(message, "warning"),
     )
 
 
@@ -155,6 +158,39 @@ def test_group_actions_by_phase_preserves_order_and_phase_names() -> None:
     ]
     assert [action.action_id for action in grouped[0][2]] == ["a1", "a2"]
     assert [action.action_id for action in grouped[1][2]] == ["a3"]
+
+
+def test_filter_grouped_actions_returns_all_when_filter_is_none() -> None:
+    """Phase filtering helper should return all groups when filter is unset."""
+    grouped = main_screen._group_actions_by_phase(_sample_project())
+
+    filtered = main_screen._filter_grouped_actions(grouped, None)
+
+    assert filtered == grouped
+
+
+def test_filter_grouped_actions_returns_only_selected_phase() -> None:
+    """Phase filtering helper should return only matching phase groups."""
+    grouped = main_screen._group_actions_by_phase(_sample_project())
+
+    filtered = main_screen._filter_grouped_actions(grouped, 2)
+
+    assert len(filtered) == 1
+    assert filtered[0][0] == 2
+    assert [action.action_id for action in filtered[0][2]] == ["a3"]
+
+
+def test_requires_redispatch_confirmation_by_status() -> None:
+    """Redispatch confirmation should be required for dispatched or completed actions."""
+    not_started = _sample_project().actions[0]
+    dispatched = _sample_project().actions[0].model_copy(deep=True)
+    dispatched.status = ActionStatus.DISPATCHED
+    completed = _sample_project().actions[0].model_copy(deep=True)
+    completed.status = ActionStatus.COMPLETED
+
+    assert main_screen._requires_redispatch_confirmation(not_started) is False
+    assert main_screen._requires_redispatch_confirmation(dispatched) is True
+    assert main_screen._requires_redispatch_confirmation(completed) is True
 
 
 def test_dispatch_action_resolves_payload_dispatches_and_updates_status(

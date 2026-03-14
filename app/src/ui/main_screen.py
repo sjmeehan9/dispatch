@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 from collections import defaultdict
@@ -18,29 +19,19 @@ from app.src.services import (
 from app.src.services.project_service import ProjectService
 from app.src.ui.components import (
     LoadingOverlay,
+    action_status_badge,
+    action_type_icon,
+    confirm_redispatch,
     loading_overlay,
     map_executor_error,
     notify_error,
     notify_success,
     notify_warning,
     page_layout,
+    progress_summary,
     with_loading,
 )
 from app.src.ui.state import AppState
-
-_ACTION_ICON_MAP: dict[str, str] = {
-    ActionType.IMPLEMENT.value: "build",
-    ActionType.TEST.value: "science",
-    ActionType.REVIEW.value: "grading",
-    ActionType.DOCUMENT.value: "description",
-    ActionType.DEBUG.value: "bug_report",
-}
-
-_STATUS_COLOR_MAP: dict[str, str] = {
-    ActionStatus.NOT_STARTED.value: "grey",
-    ActionStatus.DISPATCHED.value: "blue",
-    ActionStatus.COMPLETED.value: "green",
-}
 
 _UNRESOLVED_VARIABLE_PATTERN = re.compile(r"\{\{(\w+)\}\}")
 
@@ -83,11 +74,6 @@ def _action_label(project: Project, action: Action) -> str:
         if component is not None:
             component_name = component.component_name
     return f"Implement: {component_name}"
-
-
-def _status_color(action: Action) -> str:
-    """Return the badge color for an action's current status."""
-    return _STATUS_COLOR_MAP.get(str(action.status), "grey")
 
 
 def _response_color_class(status_code: int) -> str:
@@ -298,6 +284,21 @@ def _group_actions_by_phase(
     return grouped
 
 
+def _filter_grouped_actions(
+    grouped_actions: list[tuple[int, str, list[Action]]],
+    phase_id: int | None,
+) -> list[tuple[int, str, list[Action]]]:
+    """Return grouped actions filtered to a specific phase when requested."""
+    if phase_id is None:
+        return grouped_actions
+    return [group for group in grouped_actions if group[0] == phase_id]
+
+
+def _requires_redispatch_confirmation(action: Action) -> bool:
+    """Return whether dispatch should require user confirmation."""
+    return action.status in (ActionStatus.DISPATCHED, ActionStatus.COMPLETED)
+
+
 async def _dispatch_action(
     app_state: AppState,
     project_service: ProjectService,
@@ -369,14 +370,49 @@ def _render_action_list(
         ui.label("No actions generated yet.").classes("text-grey-7")
         return
 
+    selected_phase_id = getattr(app_state, "selected_phase_filter_phase_id", None)
+
     dispatching_action_id = app_state.dispatching_action_id
     completing_action_id = app_state.completing_action_id
 
     with ui.column().classes("w-full q-gutter-sm"):
-        for phase_id, phase_name, actions in grouped_actions:
+
+        progress_summary(app_state.current_project.actions)
+
+        phase_options: dict[str, int | None] = {"All Phases": None}
+        for phase_id, phase_name, _ in grouped_actions:
+            phase_options[f"Phase {phase_id}: {phase_name}"] = phase_id
+
+        def _on_phase_filter_change(event: object) -> None:
+            value = getattr(event, "value", None)
+            app_state.selected_phase_filter_phase_id = int(value) if value else None
+            _render_action_list.refresh()
+
+        ui.select(
+            options=phase_options,
+            value=selected_phase_id,
+            label="Filter by Phase",
+            on_change=_on_phase_filter_change,
+        ).classes("w-full")
+
+        filtered_groups = _filter_grouped_actions(grouped_actions, selected_phase_id)
+        if not filtered_groups:
+            ui.label("No actions match the selected phase.").classes("text-grey-7")
+            return
+
+        for phase_id, phase_name, actions in filtered_groups:
+            phase_completed = sum(
+                1 for action in actions if action.status == ActionStatus.COMPLETED
+            )
+            phase_total = len(actions)
             with ui.expansion(f"Phase {phase_id}: {phase_name}", value=True).classes(
                 "w-full"
             ):
+                with ui.row().classes("w-full justify-end q-px-sm q-pt-sm"):
+                    ui.badge(f"{phase_completed}/{phase_total}").props(
+                        'color="primary" text-color="white"'
+                    )
+
                 with ui.list().classes("w-full"):
                     for action in actions:
                         with ui.item().classes("w-full"):
@@ -385,26 +421,23 @@ def _render_action_list(
                                     "w-full items-center justify-between no-wrap q-gutter-sm"
                                 ):
                                     with ui.row().classes("items-center q-gutter-sm"):
-                                        ui.icon(
-                                            _ACTION_ICON_MAP.get(
-                                                str(action.action_type),
-                                                "play_arrow",
-                                            )
+                                        icon_name, icon_color = action_type_icon(
+                                            action.action_type
+                                        )
+                                        ui.icon(icon_name).props(
+                                            f'color="{icon_color}"'
                                         )
                                         ui.label(
                                             _action_label(
                                                 app_state.current_project, action
                                             )
                                         ).classes("text-body2")
-                                    ui.badge(
-                                        str(action.status).replace("_", " ").title(),
-                                        color=_status_color(action),
-                                    )
+                                    action_status_badge(action.status)
                             with ui.item_section(side=True):
                                 dispatch_button = ui.button(
                                     "Dispatch",
                                     icon="send",
-                                    on_click=lambda current_action=action: _handle_dispatch(
+                                    on_click=lambda current_action=action: _request_dispatch(
                                         current_action
                                     ),
                                     color="primary",
@@ -452,6 +485,19 @@ def _render_action_list(
                             refresh_response_panel,
                         ),
                     ).props("outline")
+
+    def _request_dispatch(action: Action) -> None:
+        if _requires_redispatch_confirmation(action):
+            dialog = confirm_redispatch(
+                action,
+                on_confirm=lambda current_action=action: asyncio.create_task(
+                    _handle_dispatch(current_action)
+                ),
+            )
+            dialog.open()
+            return
+
+        asyncio.create_task(_handle_dispatch(action))
 
     async def _handle_dispatch(action: Action) -> None:
         app_state.dispatching_action_id = action.action_id

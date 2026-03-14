@@ -102,3 +102,28 @@ Date: 2026-03-14
 
 ### Deviations
 - The payload editor uses CSS-driven fullscreen card behavior on mobile instead of dynamic runtime viewport detection; this keeps implementation deterministic and test-friendly in NiceGUI.
+
+## Component 5.4 - Workflow Quality-of-Life
+
+Date: 2026-03-15
+
+### What Was Built
+- Added reusable action workflow UI helpers for status badges, action-type icon mapping, progress summary rendering, and redispatch confirmation dialogs.
+- Upgraded the main action list with a completion summary bar and dynamic per-phase completion badges.
+- Added phase filtering (All Phases or single phase) to reduce visual noise in large projects.
+- Added redispatch safety confirmation for actions already marked as dispatched or completed.
+- Applied distinct action-type visual accents with required icon and color mappings.
+
+### Key Files Modified
+- app/src/ui/components.py
+- app/src/ui/main_screen.py
+- tests/test_ui_components.py
+- tests/test_main_screen.py
+
+### Design Decisions
+- Kept progress and badge rendering in shared UI helpers to avoid duplicating presentation logic in multiple screens.
+- Added pure helper functions for phase filtering and redispatch condition checks so core behavior remains directly unit-testable.
+- Preserved existing dispatch execution flow and wrapped only the trigger path with confirmation when required.
+
+### Deviations
+- None. Component was implemented according to the Phase 5.4 requirements and acceptance criteria.
