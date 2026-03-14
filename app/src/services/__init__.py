@@ -1,5 +1,12 @@
 """Service modules for Dispatch."""
 
+from app.src.exceptions import (
+    LLMAuthError,
+    LLMError,
+    LLMRateLimitError,
+    LLMServiceError,
+    LLMTimeoutError,
+)
 from app.src.services.action_generator import ActionGenerator
 from app.src.services.executor import (
     AutopilotExecutor,
@@ -18,6 +25,7 @@ from app.src.services.github_client import (
     GitHubNotFoundError,
     GitHubRateLimitError,
 )
+from app.src.services.llm_service import LLMService
 from app.src.services.payload_resolver import PayloadResolver
 from app.src.services.project_service import (
     ProjectLinkError,
@@ -42,6 +50,12 @@ __all__ = [
     "GitHubFileEntry",
     "GitHubNotFoundError",
     "GitHubRateLimitError",
+    "LLMAuthError",
+    "LLMError",
+    "LLMRateLimitError",
+    "LLMService",
+    "LLMServiceError",
+    "LLMTimeoutError",
     "PayloadResolver",
     "ProjectLinkError",
     "ProjectNotFoundError",
