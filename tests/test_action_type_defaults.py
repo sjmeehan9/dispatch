@@ -225,6 +225,16 @@ def test_render_action_type_defaults_prepopulates_values(
     """Screen should render expected labels and load existing template values."""
     fake_ui = _FakeUI()
     monkeypatch.setattr(action_type_defaults, "ui", fake_ui)
+    monkeypatch.setattr(
+        action_type_defaults,
+        "notify_error",
+        lambda message: fake_ui.notify(message, "negative"),
+    )
+    monkeypatch.setattr(
+        action_type_defaults,
+        "notify_success",
+        lambda message: fake_ui.notify(message, "positive"),
+    )
     app_state, _, _ = _build_app_state()
 
     action_type_defaults.render_action_type_defaults(app_state)
@@ -246,6 +256,16 @@ def test_render_action_type_defaults_saves_updated_values(
     """Save should persist updated defaults and show a success notification."""
     fake_ui = _FakeUI()
     monkeypatch.setattr(action_type_defaults, "ui", fake_ui)
+    monkeypatch.setattr(
+        action_type_defaults,
+        "notify_error",
+        lambda message: fake_ui.notify(message, "negative"),
+    )
+    monkeypatch.setattr(
+        action_type_defaults,
+        "notify_success",
+        lambda message: fake_ui.notify(message, "positive"),
+    )
     app_state, saves, reload_calls = _build_app_state()
 
     action_type_defaults.render_action_type_defaults(app_state)

@@ -5,7 +5,14 @@ from __future__ import annotations
 from nicegui import run, ui
 
 from app.src.services.project_service import ProjectNotFoundError, ProjectService
-from app.src.ui.components import loading_overlay, page_layout, with_loading
+from app.src.ui.components import (
+    loading_overlay,
+    notify_error,
+    notify_success,
+    notify_warning,
+    page_layout,
+    with_loading,
+)
 from app.src.ui.state import AppState
 
 
@@ -36,11 +43,11 @@ def render_load_project(app_state: AppState) -> None:
                 load_overlay,
             )
         except ProjectNotFoundError as exc:
-            ui.notify(str(exc), type="negative")
+            notify_error(str(exc))
             _project_list.refresh()
             return
         except OSError as exc:
-            ui.notify(f"Unable to load project: {exc}", type="negative")
+            notify_error(f"Unable to load project: {exc}")
             return
 
         app_state.current_project = project
@@ -50,11 +57,11 @@ def render_load_project(app_state: AppState) -> None:
         try:
             project_service.delete_project(project_id)
         except ProjectNotFoundError as exc:
-            ui.notify(str(exc), type="warning")
+            notify_warning(str(exc))
         except OSError as exc:
-            ui.notify(f"Unable to delete project: {exc}", type="negative")
+            notify_error(f"Unable to delete project: {exc}")
         else:
-            ui.notify("Project deleted", type="positive")
+            notify_success("Project deleted")
         finally:
             _project_list.refresh()
 

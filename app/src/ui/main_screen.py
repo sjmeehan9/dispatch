@@ -10,10 +10,19 @@ from typing import Callable
 from nicegui import run, ui
 
 from app.src.models import Action, ActionStatus, ActionType, ExecutorResponse, Project
+from app.src.services import (
+    ExecutorAuthError,
+    ExecutorConnectionError,
+    ExecutorDispatchError,
+)
 from app.src.services.project_service import ProjectService
 from app.src.ui.components import (
     LoadingOverlay,
     loading_overlay,
+    map_executor_error,
+    notify_error,
+    notify_success,
+    notify_warning,
     page_layout,
     with_loading,
 )
@@ -139,13 +148,13 @@ def _save_edited_payload(action: Action, new_payload_json: str) -> bool:
 def _insert_debug_action(app_state: AppState, phase_id: int, position: int) -> None:
     """Insert a debug action into a phase and persist project changes."""
     if app_state.current_project is None:
-        ui.notify("No project loaded.", type="negative")
+        notify_error("No project loaded.")
         return
 
     try:
         action_type_defaults = app_state.config_manager.get_action_type_defaults()
     except (OSError, ValueError) as exc:
-        ui.notify(f"Unable to load action defaults: {exc}", type="negative")
+        notify_error(f"Unable to load action defaults: {exc}")
         return
 
     phase_indices = [
@@ -154,7 +163,7 @@ def _insert_debug_action(app_state: AppState, phase_id: int, position: int) -> N
         if item.phase_id == phase_id
     ]
     if not phase_indices:
-        ui.notify(f"No actions found for phase {phase_id}.", type="negative")
+        notify_error(f"No actions found for phase {phase_id}.")
         return
 
     insertion_index = phase_indices[0] + position
@@ -166,7 +175,7 @@ def _insert_debug_action(app_state: AppState, phase_id: int, position: int) -> N
             action_type_defaults,
         )
     except ValueError as exc:
-        ui.notify(str(exc), type="negative")
+        notify_error(str(exc))
         return
 
     inserted_action = app_state.current_project.actions[insertion_index]
@@ -184,19 +193,16 @@ def _insert_debug_action(app_state: AppState, phase_id: int, position: int) -> N
         )
         inserted_action.payload = resolved.payload
     except (OSError, ValueError) as exc:
-        ui.notify(
-            f"Debug action inserted, but payload resolution failed: {exc}",
-            type="warning",
-        )
+        notify_warning(f"Debug action inserted, but payload resolution failed: {exc}")
 
     project_service = _project_service_for_main_screen(app_state)
     try:
         project_service.save_project(app_state.current_project)
     except OSError as exc:
-        ui.notify(f"Debug action inserted, but save failed: {exc}", type="warning")
+        notify_warning(f"Debug action inserted, but save failed: {exc}")
         return
 
-    ui.notify("Debug action inserted", type="positive")
+    notify_success("Debug action inserted")
 
 
 def _show_payload_editor(
@@ -245,10 +251,7 @@ def _show_payload_editor(
             async def _save() -> None:
                 saved = _save_edited_payload(action, str(editor.value or ""))
                 if not saved:
-                    ui.notify(
-                        "Invalid JSON. Payload must be a JSON object.",
-                        type="negative",
-                    )
+                    notify_error("Invalid JSON. Payload must be a JSON object.")
                     return
 
                 if app_state.current_project is not None:
@@ -257,12 +260,10 @@ def _show_payload_editor(
                             project_service.save_project, app_state.current_project
                         )
                     except OSError as exc:
-                        ui.notify(
-                            f"Payload updated, but save failed: {exc}", type="warning"
-                        )
+                        notify_warning(f"Payload updated, but save failed: {exc}")
                         return
 
-                ui.notify("Payload updated", type="positive")
+                notify_success("Payload updated")
                 dialog.close()
                 refresh_action_list()
                 if refresh_response_panel is not None:
@@ -302,7 +303,7 @@ async def _dispatch_action(
 ) -> ExecutorResponse | None:
     """Resolve and dispatch an action payload, then persist updated state."""
     if app_state.current_project is None:
-        ui.notify("No project loaded.", type="negative")
+        notify_error("No project loaded.")
         return None
 
     try:
@@ -321,8 +322,11 @@ async def _dispatch_action(
             resolved_payload.payload,
             executor_config,
         )
+    except (ExecutorConnectionError, ExecutorAuthError, ExecutorDispatchError) as exc:
+        notify_error(map_executor_error(exc))
+        return None
     except (OSError, ValueError) as exc:
-        ui.notify(f"Dispatch failed: {exc}", type="negative")
+        notify_error(f"Dispatch failed: {exc}")
         return None
 
     action.payload = resolved_payload.payload
@@ -336,12 +340,12 @@ async def _dispatch_action(
     try:
         await run.io_bound(project_service.save_project, app_state.current_project)
     except OSError as exc:
-        ui.notify(f"Dispatched, but save failed: {exc}", type="warning")
+        notify_warning(f"Dispatched, but save failed: {exc}")
     else:
         if dispatch_succeeded:
-            ui.notify("Action dispatched", type="positive")
+            notify_success("Action dispatched")
         else:
-            ui.notify(f"Dispatch failed: {response.message}", type="negative")
+            notify_error(f"Dispatch failed: {response.message}")
 
     return response
 
@@ -469,9 +473,9 @@ def _render_action_list(
                     project_service.save_project, app_state.current_project
                 )
             except OSError as exc:
-                ui.notify(f"Unable to save project: {exc}", type="negative")
+                notify_error(f"Unable to save project: {exc}")
             else:
-                ui.notify("Action marked complete", type="positive")
+                notify_success("Action marked complete")
 
         app_state.completing_action_id = None
         _render_action_list.refresh()
@@ -512,9 +516,7 @@ def _show_insert_debug_dialog(
                 try:
                     position = int(raw_position) if raw_position is not None else -1
                 except (TypeError, ValueError):
-                    ui.notify(
-                        "Insert position must be a valid number.", type="negative"
-                    )
+                    notify_error("Insert position must be a valid number.")
                     return
 
                 _insert_debug_action(app_state, phase_id, position)
@@ -585,10 +587,7 @@ def _render_response_panel(
                         async def _refresh_webhook() -> None:
                             webhook_payload = _poll_webhook(app_state, run_id)
                             if webhook_payload is None:
-                                ui.notify(
-                                    "Webhook response not available yet.",
-                                    type="warning",
-                                )
+                                notify_warning("Webhook response not available yet.")
                                 _render_response_panel.refresh()
                                 return
 
@@ -600,9 +599,8 @@ def _render_response_panel(
                                         app_state.current_project,
                                     )
                                 except OSError as exc:
-                                    ui.notify(
-                                        f"Webhook received but save failed: {exc}",
-                                        type="warning",
+                                    notify_warning(
+                                        f"Webhook received but save failed: {exc}"
                                     )
 
                             _render_response_panel.refresh()
@@ -633,10 +631,10 @@ def _render_response_panel(
                             project_service.save_project, app_state.current_project
                         )
                     except OSError as exc:
-                        ui.notify(f"Unable to save project: {exc}", type="negative")
+                        notify_error(f"Unable to save project: {exc}")
                         return
 
-                ui.notify("Action marked complete", type="positive")
+                notify_success("Action marked complete")
                 refresh_action_list()
                 _render_response_panel.refresh()
 
@@ -652,7 +650,7 @@ def render_main_screen(app_state: AppState, project_id: str) -> None:
     """Render the main dispatch workspace for a linked project."""
     project = app_state.ensure_project(project_id)
     if project is None:
-        ui.notify("Project not found. Redirected to home.", type="negative")
+        notify_error("Project not found. Redirected to home.")
         ui.navigate.to("/")
         return
 
@@ -674,7 +672,7 @@ def render_main_screen(app_state: AppState, project_id: str) -> None:
 
     async def _save_project() -> None:
         if app_state.current_project is None:
-            ui.notify("No project loaded.", type="negative")
+            notify_error("No project loaded.")
             return
         try:
             await with_loading(
@@ -684,9 +682,9 @@ def render_main_screen(app_state: AppState, project_id: str) -> None:
                 save_overlay,
             )
         except OSError as exc:
-            ui.notify(f"Unable to save project: {exc}", type="negative")
+            notify_error(f"Unable to save project: {exc}")
             return
-        ui.notify("Project saved", type="positive")
+        notify_success("Project saved")
 
     with ui.column().classes("w-full q-pa-md q-gutter-md"):
         with ui.row().classes("w-full items-center justify-between"):

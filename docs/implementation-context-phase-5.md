@@ -38,3 +38,35 @@ Date: 2026-03-14
 
 ### Deviations
 - None. Component was implemented according to the Phase 5.1 requirements and acceptance criteria.
+
+## Component 5.2 - Error Handling and User Feedback
+
+Date: 2026-03-14
+
+### What Was Built
+- Added centralized toast helpers for success, warning, and error notifications with consistent timeout/dismiss behavior.
+- Added centralized error mapping helpers for GitHub and executor failures to provide actionable user-facing guidance.
+- Added typed GitHub rate-limit handling and typed executor dispatch exceptions for connection, auth, and non-success responses.
+- Refactored UI screens to use centralized notifications for save, dispatch, mark-complete, link, and error states.
+- Added a global exception callback registration in app startup to log unexpected errors and show a safe user message.
+
+### Key Files Modified
+- app/src/ui/components.py
+- app/src/ui/executor_config.py
+- app/src/ui/action_type_defaults.py
+- app/src/ui/secrets_screen.py
+- app/src/ui/link_project.py
+- app/src/ui/load_project.py
+- app/src/ui/main_screen.py
+- app/src/main.py
+- app/src/services/github_client.py
+- app/src/services/executor.py
+- app/src/services/__init__.py
+
+### Design Decisions
+- Kept notification behavior in a single shared module to avoid copy/paste messaging logic and guarantee consistent UX timing.
+- Used typed exceptions in the executor and GitHub client to avoid brittle string-matching in dispatch/link workflows.
+- Preserved existing ProjectService domain errors while adding a typed rate-limit path and richer UI-side mapping.
+
+### Deviations
+- None. Component was implemented according to the Phase 5.2 requirements and acceptance criteria.

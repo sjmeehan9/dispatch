@@ -13,6 +13,33 @@ from app.src.models import ExecutorConfig, ExecutorResponse
 _LOGGER = logging.getLogger(__name__)
 
 
+class ExecutorError(Exception):
+    """Base exception for executor dispatch failures."""
+
+
+class ExecutorConnectionError(ExecutorError):
+    """Raised when the executor endpoint cannot be reached."""
+
+    def __init__(self, endpoint: str) -> None:
+        """Initialise exception with the failed endpoint URL."""
+        self.endpoint = endpoint
+        super().__init__(f"Cannot reach executor at {endpoint}")
+
+
+class ExecutorAuthError(ExecutorError):
+    """Raised when executor authentication fails."""
+
+
+class ExecutorDispatchError(ExecutorError):
+    """Raised when the executor rejects or fails to process a dispatch."""
+
+    def __init__(self, status_code: int, message: str) -> None:
+        """Initialise exception with executor HTTP status and message."""
+        self.status_code = status_code
+        self.message = message
+        super().__init__(f"Executor error ({status_code}): {message}")
+
+
 @runtime_checkable
 class Executor(Protocol):
     """Protocol that all executor implementations must satisfy."""
@@ -42,8 +69,7 @@ class AutopilotExecutor:
                 "API key not configured. "
                 f"Set {config.api_key_env_key} in your environment."
             )
-            _LOGGER.warning(message)
-            return ExecutorResponse(status_code=0, message=message, run_id=None)
+            raise ExecutorDispatchError(status_code=0, message=message)
 
         headers = {"X-API-Key": api_key, "Content-Type": "application/json"}
         endpoint = str(config.api_endpoint)
@@ -52,20 +78,19 @@ class AutopilotExecutor:
         try:
             with httpx.Client(timeout=self._REQUEST_TIMEOUT_SECONDS) as client:
                 response = client.post(endpoint, json=payload, headers=headers)
-        except httpx.ConnectError:
-            message = f"Connection failed: could not reach {endpoint}"
-            _LOGGER.warning(message)
-            return ExecutorResponse(status_code=0, message=message, run_id=None)
-        except httpx.TimeoutException:
-            message = (
-                f"Request timed out after {int(self._REQUEST_TIMEOUT_SECONDS)} seconds"
+        except (httpx.ConnectError, httpx.ConnectTimeout) as exc:
+            _LOGGER.warning("Executor connection failure for %s: %s", endpoint, exc)
+            raise ExecutorConnectionError(endpoint) from exc
+        except httpx.TimeoutException as exc:
+            _LOGGER.warning(
+                "Executor request timed out after %s seconds for %s",
+                int(self._REQUEST_TIMEOUT_SECONDS),
+                endpoint,
             )
-            _LOGGER.warning(message)
-            return ExecutorResponse(status_code=0, message=message, run_id=None)
+            raise ExecutorConnectionError(endpoint) from exc
         except httpx.HTTPError as exc:
-            message = f"HTTP error: {exc}"
-            _LOGGER.warning(message)
-            return ExecutorResponse(status_code=0, message=message, run_id=None)
+            _LOGGER.warning("Executor HTTP error for %s: %s", endpoint, exc)
+            raise ExecutorDispatchError(status_code=0, message=str(exc)) from exc
 
         _LOGGER.info("Executor response: %s", response.status_code)
 
@@ -80,11 +105,14 @@ class AutopilotExecutor:
                 raw_response=response_json,
             )
 
-        return ExecutorResponse(
+        if response.status_code in (401, 403):
+            raise ExecutorAuthError(
+                "Executor API key rejected. Check your API key in Manage Secrets."
+            )
+
+        raise ExecutorDispatchError(
             status_code=response.status_code,
             message=self._extract_error_message(response),
-            run_id=None,
-            raw_response=None,
         )
 
     @staticmethod

@@ -164,6 +164,12 @@ def test_render_executor_config_prepopulates_existing_values(
     """Screen should load saved executor values when config file already exists."""
     fake_ui = _FakeUI()
     monkeypatch.setattr(executor_config, "ui", fake_ui)
+    monkeypatch.setattr(
+        executor_config, "notify_error", lambda message: fake_ui.notify(message, "negative")
+    )
+    monkeypatch.setattr(
+        executor_config, "notify_success", lambda message: fake_ui.notify(message, "positive")
+    )
 
     app_state, _, _ = _build_app_state(tmp_path)
     (tmp_path / "executor.json").write_text("{}", encoding="utf-8")
@@ -188,6 +194,12 @@ def test_render_executor_config_saves_valid_values(
     """Save should persist validated config and show success notification."""
     fake_ui = _FakeUI()
     monkeypatch.setattr(executor_config, "ui", fake_ui)
+    monkeypatch.setattr(
+        executor_config, "notify_error", lambda message: fake_ui.notify(message, "negative")
+    )
+    monkeypatch.setattr(
+        executor_config, "notify_success", lambda message: fake_ui.notify(message, "positive")
+    )
     app_state, saves, reload_calls = _build_app_state(tmp_path)
 
     executor_config.render_executor_config(app_state)
@@ -212,6 +224,12 @@ def test_render_executor_config_rejects_invalid_endpoint_url(
     """Save should block when required URL fields are invalid."""
     fake_ui = _FakeUI()
     monkeypatch.setattr(executor_config, "ui", fake_ui)
+    monkeypatch.setattr(
+        executor_config, "notify_error", lambda message: fake_ui.notify(message, "negative")
+    )
+    monkeypatch.setattr(
+        executor_config, "notify_success", lambda message: fake_ui.notify(message, "positive")
+    )
     app_state, saves, reload_calls = _build_app_state(tmp_path)
 
     executor_config.render_executor_config(app_state)
@@ -232,6 +250,12 @@ def test_render_executor_config_back_button_navigates_home(
     """Shared header back icon should navigate to the initial screen route."""
     fake_ui = _FakeUI()
     monkeypatch.setattr(executor_config, "ui", fake_ui)
+    monkeypatch.setattr(
+        executor_config, "notify_error", lambda message: fake_ui.notify(message, "negative")
+    )
+    monkeypatch.setattr(
+        executor_config, "notify_success", lambda message: fake_ui.notify(message, "positive")
+    )
     app_state, _, _ = _build_app_state(tmp_path)
 
     executor_config.render_executor_config(app_state)

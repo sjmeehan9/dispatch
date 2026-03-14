@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from nicegui import ui
 
-from app.src.ui.components import page_layout
+from app.src.ui.components import notify_success, notify_warning, page_layout
 from app.src.ui.state import AppState
 
 
@@ -59,10 +59,10 @@ def render_secrets_screen(app_state: AppState) -> None:
                     saved_keys += 1
 
                 if saved_keys == 0:
-                    ui.notify("No secret changes to save", type="warning")
+                    notify_warning("No secret changes to save")
                     return
 
-                ui.notify("Secrets saved", type="positive")
+                notify_success("Secrets saved")
 
             with ui.row().classes("w-full justify-end q-gutter-sm q-mt-md"):
                 ui.button("Save", on_click=_save_secrets, color="primary")

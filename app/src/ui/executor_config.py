@@ -10,10 +10,10 @@ from pydantic import ValidationError
 
 from app.src.config import EXECUTOR_CONFIG_FILENAME
 from app.src.models import ExecutorConfig
-from app.src.ui.components import page_layout
+from app.src.ui.components import notify_error, notify_success, page_layout
 from app.src.ui.state import AppState
 
-_URL_VALIDATION_MESSAGE = "URL must start with http:// or https://"
+_URL_VALIDATION_MESSAGE = "Must start with http:// or https://"
 
 
 def _is_non_empty(value: str) -> bool:
@@ -62,14 +62,14 @@ def render_executor_config(app_state: AppState) -> None:
             executor_name = ui.input(
                 "Executor Name",
                 value=(existing.executor_name if existing else "autopilot"),
-                validation={"Required": _is_non_empty},
+                validation={"This field is required": _is_non_empty},
             ).classes("w-full")
 
             api_endpoint = ui.input(
                 "API Endpoint URL",
                 value=(str(existing.api_endpoint) if existing else ""),
                 validation={
-                    "Required": _is_non_empty,
+                    "This field is required": _is_non_empty,
                     _URL_VALIDATION_MESSAGE: _is_valid_url,
                 },
             ).classes("w-full")
@@ -77,7 +77,7 @@ def render_executor_config(app_state: AppState) -> None:
             api_key_env_var = ui.input(
                 "API Key Environment Variable",
                 value=(existing.api_key_env_key if existing else "AUTOPILOT_API_KEY"),
-                validation={"Required": _is_non_empty},
+                validation={"This field is required": _is_non_empty},
             ).classes("w-full")
             ui.label(
                 "Name of the environment variable that holds the API key."
@@ -98,23 +98,19 @@ def render_executor_config(app_state: AppState) -> None:
 
             def _save_config() -> None:
                 if not executor_name.validate():
-                    ui.notify("Executor Name is required", type="negative")
+                    notify_error("Executor Name is required")
                     return
                 if not api_endpoint.validate():
-                    ui.notify(
-                        f"API Endpoint URL is required and {_URL_VALIDATION_MESSAGE.lower()}",
-                        type="negative",
+                    notify_error(
+                        "API Endpoint URL is required and must start with http:// or https://"
                     )
                     return
                 if not api_key_env_var.validate():
-                    ui.notify(
-                        "API Key Environment Variable is required", type="negative"
-                    )
+                    notify_error("API Key Environment Variable is required")
                     return
                 if not webhook_url.validate():
-                    ui.notify(
-                        f"Webhook URL is optional, but when provided {_URL_VALIDATION_MESSAGE.lower()}",
-                        type="negative",
+                    notify_error(
+                        "Webhook URL is optional, but when provided it must start with http:// or https://"
                     )
                     return
 
@@ -129,13 +125,10 @@ def render_executor_config(app_state: AppState) -> None:
                     app_state.config_manager.save_executor_config(config)
                     app_state.reload_config()
                 except (ValidationError, ValueError) as exc:
-                    ui.notify(
-                        f"Unable to save executor configuration: {exc}",
-                        type="negative",
-                    )
+                    notify_error(f"Unable to save executor configuration: {exc}")
                     return
 
-                ui.notify("Executor configuration saved", type="positive")
+                notify_success("Executor configuration saved")
 
             with ui.row().classes("w-full justify-end q-gutter-sm q-mt-md"):
                 ui.button("Save", on_click=_save_config, color="primary")

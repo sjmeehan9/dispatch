@@ -18,6 +18,7 @@ from app.src.models import (
 )
 from app.src.services import ActionGenerator, PayloadResolver
 from app.src.ui import main_screen
+from app.src.services import ExecutorConnectionError
 
 
 class _FakeRun:
@@ -38,6 +39,19 @@ class _FakeUI:
 
     def notify(self, message: str, type: str = "info") -> None:
         self.notifications.append((message, type))
+
+
+def _patch_notifications(monkeypatch, fake_ui: _FakeUI) -> None:
+    """Route centralized notification helpers into the fake UI collector."""
+    monkeypatch.setattr(
+        main_screen, "notify_success", lambda message: fake_ui.notify(message, "positive")
+    )
+    monkeypatch.setattr(
+        main_screen, "notify_error", lambda message: fake_ui.notify(message, "negative")
+    )
+    monkeypatch.setattr(
+        main_screen, "notify_warning", lambda message: fake_ui.notify(message, "warning")
+    )
 
 
 class _FakeProjectService:
@@ -149,6 +163,7 @@ def test_dispatch_action_resolves_payload_dispatches_and_updates_status(
     """Dispatch should resolve payload, call executor, persist, and mark dispatched."""
     fake_ui = _FakeUI()
     monkeypatch.setattr(main_screen, "ui", fake_ui)
+    _patch_notifications(monkeypatch, fake_ui)
     monkeypatch.setattr(main_screen, "run", _FakeRun())
 
     project = _sample_project()
@@ -222,9 +237,10 @@ def test_dispatch_action_resolves_payload_dispatches_and_updates_status(
 def test_dispatch_action_keeps_status_when_executor_returns_failure(
     monkeypatch,
 ) -> None:
-    """Failed dispatch responses should not mark an action as dispatched."""
+    """Failed dispatch exceptions should not mutate action state or persist changes."""
     fake_ui = _FakeUI()
     monkeypatch.setattr(main_screen, "ui", fake_ui)
+    _patch_notifications(monkeypatch, fake_ui)
     monkeypatch.setattr(main_screen, "run", _FakeRun())
 
     project = _sample_project()
@@ -243,16 +259,7 @@ def test_dispatch_action_keeps_status_when_executor_returns_failure(
         payload: dict[str, object], config: ExecutorConfig
     ) -> SimpleNamespace:
         _ = payload, config
-        return SimpleNamespace(
-            status_code=0,
-            message="Connection failed",
-            run_id=None,
-            model_dump=lambda: {
-                "status_code": 0,
-                "message": "Connection failed",
-                "run_id": None,
-            },
-        )
+        raise ExecutorConnectionError("https://executor.example.com/run")
 
     app_state = SimpleNamespace(
         current_project=project,
@@ -278,17 +285,15 @@ def test_dispatch_action_keeps_status_when_executor_returns_failure(
         main_screen._dispatch_action(app_state, project_service, action)
     )
 
-    assert response is not None
-    assert response.status_code == 0
+    assert response is None
     assert action.status == ActionStatus.NOT_STARTED
-    assert action.executor_response == {
-        "status_code": 0,
-        "message": "Connection failed",
-        "run_id": None,
-    }
-    assert app_state.last_dispatched_action is action
-    assert project_service.saved_projects == [project]
-    assert ("Dispatch failed: Connection failed", "negative") in fake_ui.notifications
+    assert action.executor_response is None
+    assert getattr(app_state, "last_dispatched_action", None) is None
+    assert project_service.saved_projects == []
+    assert (
+        "Cannot reach executor at https://executor.example.com/run. Is the executor running?",
+        "negative",
+    ) in fake_ui.notifications
 
 
 def test_poll_webhook_returns_stored_payload() -> None:
@@ -382,6 +387,7 @@ def test_insert_debug_action_inserts_at_position_and_persists(monkeypatch) -> No
     """Debug insertion helper should insert in-phase at requested index and save."""
     fake_ui = _FakeUI()
     monkeypatch.setattr(main_screen, "ui", fake_ui)
+    _patch_notifications(monkeypatch, fake_ui)
 
     project = _sample_project()
     project_service = _FakeProjectService()

@@ -139,6 +139,12 @@ def test_render_secrets_screen_shows_masked_placeholders(
     """Inputs should show masked placeholder text when a secret is already configured."""
     fake_ui = _FakeUI()
     monkeypatch.setattr(secrets_screen, "ui", fake_ui)
+    monkeypatch.setattr(
+        secrets_screen, "notify_success", lambda message: fake_ui.notify(message, "positive")
+    )
+    monkeypatch.setattr(
+        secrets_screen, "notify_warning", lambda message: fake_ui.notify(message, "warning")
+    )
     app_state, _ = _build_app_state()
 
     secrets_screen.render_secrets_screen(app_state)
@@ -154,6 +160,12 @@ def test_render_secrets_screen_saves_only_non_empty_values(
     """Save should persist only populated secrets and show success notification."""
     fake_ui = _FakeUI()
     monkeypatch.setattr(secrets_screen, "ui", fake_ui)
+    monkeypatch.setattr(
+        secrets_screen, "notify_success", lambda message: fake_ui.notify(message, "positive")
+    )
+    monkeypatch.setattr(
+        secrets_screen, "notify_warning", lambda message: fake_ui.notify(message, "warning")
+    )
     app_state, saved_secrets = _build_app_state()
 
     secrets_screen.render_secrets_screen(app_state)

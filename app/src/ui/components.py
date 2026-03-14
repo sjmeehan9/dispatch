@@ -7,6 +7,15 @@ from typing import TypeVar
 
 from nicegui import ui
 
+from app.src.services import (
+    ExecutorAuthError,
+    ExecutorConnectionError,
+    ExecutorDispatchError,
+    GitHubAuthError,
+    GitHubNotFoundError,
+    GitHubRateLimitError,
+)
+
 T = TypeVar("T")
 
 
@@ -65,6 +74,43 @@ def loading_overlay(
 ) -> LoadingOverlay:
     """Create a loading overlay instance for the current page context."""
     return LoadingOverlay(message=message, ui_module=ui_module)
+
+
+def notify_success(message: str) -> None:
+    """Show a positive, dismissible toast notification."""
+    ui.notify(message, type="positive", close_button=True, timeout=5000)
+
+
+def notify_error(message: str) -> None:
+    """Show a negative, dismissible toast notification."""
+    ui.notify(message, type="negative", close_button=True, timeout=8000)
+
+
+def notify_warning(message: str) -> None:
+    """Show a warning, dismissible toast notification."""
+    ui.notify(message, type="warning", close_button=True, timeout=5000)
+
+
+def map_github_error(exc: Exception) -> str:
+    """Map GitHub-related exceptions to user-facing error messages."""
+    if isinstance(exc, GitHubAuthError):
+        return "Authentication failed. Verify your GitHub token in Manage Secrets."
+    if isinstance(exc, GitHubNotFoundError):
+        return "Repository not found. Check the owner/repo format."
+    if isinstance(exc, GitHubRateLimitError):
+        return "GitHub API rate limit exceeded. Wait a few minutes and retry."
+    return f"GitHub API error: {exc}"
+
+
+def map_executor_error(exc: Exception) -> str:
+    """Map executor exceptions to actionable, user-facing messages."""
+    if isinstance(exc, ExecutorConnectionError):
+        return f"Cannot reach executor at {exc.endpoint}. Is the executor running?"
+    if isinstance(exc, ExecutorAuthError):
+        return "Executor API key rejected. Check your API key in Manage Secrets."
+    if isinstance(exc, ExecutorDispatchError):
+        return f"Executor error ({exc.status_code}): {exc.message}"
+    return f"Dispatch error: {exc}"
 
 
 async def with_loading(

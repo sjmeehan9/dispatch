@@ -6,8 +6,16 @@ from nicegui import run, ui
 
 from app.src.config.constants import REPOSITORY_PATTERN
 from app.src.models import Action, Project
+from app.src.services import GitHubAuthError, GitHubNotFoundError, GitHubRateLimitError
 from app.src.services.project_service import ProjectLinkError
-from app.src.ui.components import loading_overlay, page_layout, with_loading
+from app.src.ui.components import (
+    loading_overlay,
+    map_github_error,
+    notify_error,
+    notify_success,
+    page_layout,
+    with_loading,
+)
 from app.src.ui.state import AppState
 
 
@@ -20,7 +28,11 @@ def _normalise_link_error(message: str, repository: str) -> str:
             f"{repository_value}"
         )
     if "Authentication failed" in message:
-        return "Authentication failed. Check your GitHub token."
+        return "Authentication failed. Verify your GitHub token in Manage Secrets."
+    if "Repository must match owner/repo format" in message:
+        return "Must be in owner/repo format"
+    if "rate limit" in message.lower():
+        return "GitHub API rate limit exceeded. Wait a few minutes and retry."
     return message
 
 
@@ -81,7 +93,7 @@ def render_link_project(app_state: AppState) -> None:
                 "GitHub Repository",
                 placeholder="owner/repo-name",
                 validation={
-                    "Repository must be in owner/repo format.": lambda value: bool(
+                    "Must be in owner/repo format": lambda value: bool(
                         REPOSITORY_PATTERN.match(str(value).strip())
                     )
                 },
@@ -109,9 +121,7 @@ def render_link_project(app_state: AppState) -> None:
                 token_env_key = str(token_var_input.value).strip()
 
                 if not repo_input.validate() or not token_var_input.validate():
-                    ui.notify(
-                        "Please fix validation errors before scanning.", type="negative"
-                    )
+                    notify_error("Please fix validation errors before scanning.")
                     return
 
                 result_label.set_visibility(False)
@@ -121,12 +131,25 @@ def render_link_project(app_state: AppState) -> None:
                         lambda: _scan_and_link(app_state, repository, token_env_key),
                         link_overlay,
                     )
+                except (
+                    GitHubAuthError,
+                    GitHubNotFoundError,
+                    GitHubRateLimitError,
+                ) as exc:
+                    notify_error(map_github_error(exc))
+                    result_label.text = map_github_error(exc)
+                    result_label.classes(replace="text-body2 text-negative")
+                    result_label.set_visibility(True)
                 except ProjectLinkError as exc:
-                    result_label.text = _normalise_link_error(str(exc), repository)
+                    mapped_message = _normalise_link_error(str(exc), repository)
+                    notify_error(mapped_message)
+                    result_label.text = mapped_message
                     result_label.classes(replace="text-body2 text-negative")
                     result_label.set_visibility(True)
                 except (OSError, ValueError) as exc:
-                    result_label.text = f"Failed to link project: {exc}"
+                    error_message = f"Failed to link project: {exc}"
+                    notify_error(error_message)
+                    result_label.text = error_message
                     result_label.classes(replace="text-body2 text-negative")
                     result_label.set_visibility(True)
                 else:
@@ -141,6 +164,7 @@ def render_link_project(app_state: AppState) -> None:
                     )
                     result_label.classes(replace="text-body2 text-positive")
                     result_label.set_visibility(True)
+                    notify_success("Project linked successfully")
                     ui.navigate.to(f"/project/{project.project_id}")
 
             with ui.row().classes("w-full justify-end q-gutter-sm q-mt-md"):

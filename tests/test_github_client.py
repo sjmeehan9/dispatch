@@ -13,6 +13,7 @@ from app.src.services.github_client import (
     GitHubClient,
     GitHubFileEntry,
     GitHubNotFoundError,
+    GitHubRateLimitError,
 )
 
 
@@ -36,6 +37,12 @@ class _StubHttpxClient:
 
 def _response(status_code: int, payload: object) -> httpx.Response:
     return httpx.Response(status_code=status_code, json=payload)
+
+
+def _response_with_headers(
+    status_code: int, payload: object, headers: dict[str, str]
+) -> httpx.Response:
+    return httpx.Response(status_code=status_code, json=payload, headers=headers)
 
 
 def test_github_client_initializes_required_headers(
@@ -97,6 +104,44 @@ def test_get_file_contents_raises_not_found(monkeypatch: pytest.MonkeyPatch) -> 
 
 def test_get_file_contents_raises_auth_error(monkeypatch: pytest.MonkeyPatch) -> None:
     stub_client = _StubHttpxClient([_response(401, {"message": "Bad credentials"})])
+    monkeypatch.setattr(
+        "app.src.services.github_client.httpx.Client", lambda **_: stub_client
+    )
+
+    client = GitHubClient(token="token-123")
+
+    with pytest.raises(GitHubAuthError):
+        client.get_file_contents("owner", "repo", "docs/phase-progress.json")
+
+
+def test_get_file_contents_raises_rate_limit_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """403 responses with exhausted rate headers should map to rate-limit errors."""
+    stub_client = _StubHttpxClient(
+        [
+            _response_with_headers(
+                403,
+                {"message": "API rate limit exceeded"},
+                {"x-ratelimit-remaining": "0"},
+            )
+        ]
+    )
+    monkeypatch.setattr(
+        "app.src.services.github_client.httpx.Client", lambda **_: stub_client
+    )
+
+    client = GitHubClient(token="token-123")
+
+    with pytest.raises(GitHubRateLimitError):
+        client.get_file_contents("owner", "repo", "docs/phase-progress.json")
+
+
+def test_get_file_contents_raises_auth_error_for_non_rate_limit_403(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """403 responses without rate-limit headers should be treated as auth failures."""
+    stub_client = _StubHttpxClient([_response(403, {"message": "Forbidden"})])
     monkeypatch.setattr(
         "app.src.services.github_client.httpx.Client", lambda **_: stub_client
     )

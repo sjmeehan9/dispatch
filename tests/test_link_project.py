@@ -202,4 +202,4 @@ def test_normalise_link_error_maps_expected_user_messages() -> None:
         phase_error
         == "phase-progress.json not found at docs/phase-progress.json in owner/repo"
     )
-    assert auth_error == "Authentication failed. Check your GitHub token."
+    assert auth_error == "Authentication failed. Verify your GitHub token in Manage Secrets."

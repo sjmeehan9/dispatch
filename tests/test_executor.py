@@ -5,10 +5,17 @@ from __future__ import annotations
 from unittest.mock import Mock, patch
 
 import httpx
+import pytest
 
 from app.src.config.settings import Settings
 from app.src.models import ExecutorConfig
-from app.src.services.executor import AutopilotExecutor, Executor
+from app.src.services.executor import (
+    AutopilotExecutor,
+    Executor,
+    ExecutorAuthError,
+    ExecutorConnectionError,
+    ExecutorDispatchError,
+)
 
 
 def _sample_config() -> ExecutorConfig:
@@ -101,6 +108,7 @@ def test_dispatch_parses_success_response() -> None:
 
 
 def test_dispatch_returns_error_response_for_unauthorized_status() -> None:
+    """Unauthorized responses should raise an auth error."""
     executor = _executor_with_api_key()
     config = _sample_config()
 
@@ -120,15 +128,12 @@ def test_dispatch_returns_error_response_for_unauthorized_status() -> None:
         "app.src.services.executor.httpx.Client",
         return_value=client_context,
     ):
-        result = executor.dispatch({"role": "implement"}, config)
-
-    assert result.status_code == 401
-    assert result.message == "Unauthorized"
-    assert result.run_id is None
-    assert result.raw_response is None
+        with pytest.raises(ExecutorAuthError):
+            executor.dispatch({"role": "implement"}, config)
 
 
 def test_dispatch_returns_error_response_for_connection_failure() -> None:
+    """Connection failures should raise a connection error with endpoint context."""
     executor = _executor_with_api_key()
     config = _sample_config()
 
@@ -142,14 +147,14 @@ def test_dispatch_returns_error_response_for_connection_failure() -> None:
         "app.src.services.executor.httpx.Client",
         return_value=client_context,
     ):
-        result = executor.dispatch({"role": "implement"}, config)
+        with pytest.raises(ExecutorConnectionError) as exc_info:
+            executor.dispatch({"role": "implement"}, config)
 
-    assert result.status_code == 0
-    assert result.message == f"Connection failed: could not reach {config.api_endpoint}"
-    assert result.run_id is None
+    assert exc_info.value.endpoint == str(config.api_endpoint)
 
 
 def test_dispatch_returns_error_response_for_timeout() -> None:
+    """Timeouts should be surfaced as connection errors to aid retry guidance."""
     executor = _executor_with_api_key()
     config = _sample_config()
 
@@ -163,27 +168,52 @@ def test_dispatch_returns_error_response_for_timeout() -> None:
         "app.src.services.executor.httpx.Client",
         return_value=client_context,
     ):
-        result = executor.dispatch({"role": "implement"}, config)
+        with pytest.raises(ExecutorConnectionError) as exc_info:
+            executor.dispatch({"role": "implement"}, config)
 
-    assert result.status_code == 0
-    assert result.message == "Request timed out after 30 seconds"
-    assert result.run_id is None
+    assert exc_info.value.endpoint == str(config.api_endpoint)
 
 
 def test_dispatch_returns_configuration_error_when_api_key_missing() -> None:
+    """Missing API key should raise a dispatch error with actionable text."""
     settings = Mock(spec=Settings)
     settings.get_secret.return_value = None
     executor = AutopilotExecutor(settings)
 
     with patch("app.src.services.executor.httpx.Client") as client_factory:
-        result = executor.dispatch({"role": "implement"}, _sample_config())
+        with pytest.raises(ExecutorDispatchError) as exc_info:
+            executor.dispatch({"role": "implement"}, _sample_config())
 
-    assert result.status_code == 0
-    assert result.message == (
+    assert exc_info.value.status_code == 0
+    assert exc_info.value.message == (
         "API key not configured. Set AUTOPILOT_API_KEY in your environment."
     )
-    assert result.run_id is None
     client_factory.assert_not_called()
+
+
+def test_dispatch_raises_dispatch_error_for_non_auth_http_failure() -> None:
+    """Server-side failures should raise dispatch errors with status and detail."""
+    executor = _executor_with_api_key()
+    config = _sample_config()
+
+    response = Mock()
+    response.status_code = 500
+    response.is_success = False
+    response.text = "server exploded"
+    response.json.return_value = {"message": "internal failure"}
+
+    client = Mock()
+    client.post.return_value = response
+    client_context = Mock()
+    client_context.__enter__ = Mock(return_value=client)
+    client_context.__exit__ = Mock(return_value=False)
+
+    with patch("app.src.services.executor.httpx.Client", return_value=client_context):
+        with pytest.raises(ExecutorDispatchError) as exc_info:
+            executor.dispatch({"role": "implement"}, config)
+
+    assert exc_info.value.status_code == 500
+    assert exc_info.value.message == "internal failure"
 
 
 def test_autopilot_executor_satisfies_executor_protocol() -> None:

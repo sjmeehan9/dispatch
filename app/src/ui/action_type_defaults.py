@@ -8,7 +8,7 @@ from nicegui import ui
 from pydantic import ValidationError
 
 from app.src.models import ActionTypeDefaults
-from app.src.ui.components import page_layout
+from app.src.ui.components import notify_error, notify_success, page_layout
 from app.src.ui.state import AppState
 
 _ACTION_TYPES: tuple[str, ...] = ("implement", "test", "review", "document", "debug")
@@ -141,14 +141,12 @@ def render_action_type_defaults(app_state: AppState) -> None:
                 try:
                     updated_defaults = ActionTypeDefaults.model_validate(payloads)
                 except ValidationError as exc:
-                    ui.notify(
-                        f"Unable to save action type defaults: {exc}", type="negative"
-                    )
+                    notify_error(f"Unable to save action type defaults: {exc}")
                     return
 
                 app_state.config_manager.save_action_type_defaults(updated_defaults)
                 app_state.reload_config()
-                ui.notify("Action type defaults saved", type="positive")
+                notify_success("Action type defaults saved")
 
             with ui.row().classes("w-full justify-end q-gutter-sm q-mt-md"):
                 ui.button("Save", on_click=_save_defaults, color="primary")

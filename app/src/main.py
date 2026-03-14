@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from fastapi import HTTPException, Request
@@ -9,6 +10,7 @@ from fastapi.responses import JSONResponse
 from nicegui import app, ui
 
 from app.src.ui.action_type_defaults import render_action_type_defaults
+from app.src.ui.components import notify_error
 from app.src.ui.executor_config import render_executor_config
 from app.src.ui.initial_screen import render_initial_screen
 from app.src.ui.link_project import render_link_project
@@ -18,6 +20,7 @@ from app.src.ui.secrets_screen import render_secrets_screen
 from app.src.ui.state import AppState
 
 app_state = AppState()
+_LOGGER = logging.getLogger(__name__)
 
 
 def _ensure_run_config() -> None:
@@ -46,6 +49,21 @@ def _ensure_run_config() -> None:
 
 
 _ensure_run_config()
+
+
+def _register_global_exception_handler() -> None:
+    """Register a global exception callback for unexpected UI errors."""
+
+    def _handle_exception(exc: Exception) -> None:
+        _LOGGER.exception("Unhandled application error", exc_info=exc)
+        notify_error("An unexpected error occurred. Check the console for details.")
+
+    on_exception = getattr(app, "on_exception", None)
+    if callable(on_exception):
+        on_exception(_handle_exception)
+
+
+_register_global_exception_handler()
 
 
 @ui.page("/")

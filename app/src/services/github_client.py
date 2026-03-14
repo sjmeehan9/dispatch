@@ -38,6 +38,10 @@ class GitHubNotFoundError(GitHubClientError):
     """Raised when a requested GitHub resource is not found (404)."""
 
 
+class GitHubRateLimitError(GitHubClientError):
+    """Raised when GitHub API rate limiting prevents request execution."""
+
+
 class GitHubAPIError(GitHubClientError):
     """Raised for all non-auth, non-not-found GitHub API failures."""
 
@@ -204,7 +208,17 @@ class GitHubClient:
 
             if status_code == 404:
                 raise GitHubNotFoundError(f"GitHub resource not found: {url}")
-            if status_code in (401, 403):
+            if status_code == 401:
+                raise GitHubAuthError(
+                    f"GitHub authentication failed ({status_code}) for {url}; check your token."
+                )
+            if status_code == 403:
+                retry_after = response.headers.get("retry-after")
+                remaining = response.headers.get("x-ratelimit-remaining")
+                if remaining == "0" or retry_after is not None:
+                    raise GitHubRateLimitError(
+                        "GitHub API rate limit exceeded. Wait and retry."
+                    )
                 raise GitHubAuthError(
                     f"GitHub authentication failed ({status_code}) for {url}; check your token."
                 )
