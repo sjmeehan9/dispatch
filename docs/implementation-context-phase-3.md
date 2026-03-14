@@ -73,3 +73,29 @@
 
 ### Deviations
 - Validation was executed in a Python 3.12 sandbox with `--ignore-requires-python` due local runtime constraints; tests and quality checks passed for updated scope.
+
+## Component 3.4 - Action Generator Service
+- Implemented `ActionGenerator` in `app/src/services/action_generator.py` with:
+  - `generate_actions(phases, action_type_defaults)` to produce flat ordered phase actions.
+  - `insert_debug_action(actions, phase_id, position, action_type_defaults)` for phase-local Debug insertion.
+  - `_create_action(...)` helper that assigns UUIDs and deep-copies payload templates.
+  - `_component_sort_key(component_id)` helper for natural dotted numeric ordering (`1.2` < `1.10`).
+- Generation behavior now matches phase rules: per phase, all Implement actions (component natural order), then Test, Review, Document.
+- All generated actions initialize with `status=not_started`, `executor_response=None`, and `webhook_response=None`.
+- Added INFO-level logs for total generated actions/phases and Debug insertion position/phase.
+- Updated `app/src/services/__init__.py` to export `ActionGenerator`.
+- Added focused tests in `tests/test_action_generator.py` covering:
+  - single-phase ordering and component/phase-level `component_id` assignment,
+  - natural component sorting (`1.1`, `1.2`, `1.10`),
+  - multi-phase ordering and UUID uniqueness,
+  - payload deep-copy isolation from defaults,
+  - Debug insertion at start, middle, and end positions,
+  - out-of-range insertion validation errors.
+
+### Decisions
+- Kept `ActionGenerator` stateless via class/static methods to simplify reuse in service and UI layers.
+- Chose deep-copy payload cloning at action creation so per-action edits cannot mutate global defaults.
+- Added robust sort fallback for non-numeric component segments while preserving numeric natural-order behavior.
+
+### Deviations
+- The component breakdown’s “3 components generates 7 actions” count appears inconsistent with required sequence; implementation follows explicit ordering rules (`3 Implement + Test + Review + Document = 6`).
