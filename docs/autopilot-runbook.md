@@ -758,12 +758,43 @@ pytest -q --cov=app/src --cov-report=term-missing
 # Formatting
 black --check app/src/ tests/ scripts/
 
-# Import ordering
+# Import sorting
 isort --check-only app/src/ tests/ scripts/
 
-# Docstring and TODO/FIXME gate
+# Evals quality gates
 python scripts/evals.py
 ```
+
+## Dispatch Responsive Testing
+
+Use this checklist when validating Dispatch UI behaviour after any UI change.
+
+### Tooling
+
+1. Start Dispatch locally: `python -m app.src.main`
+2. Open Chrome DevTools Device Toolbar (or Safari Responsive Design Mode)
+3. Test each viewport below and record pass/fail notes
+
+### Breakpoints
+
+- `375px` (iPhone SE)
+- `390px` (iPhone 14)
+- `768px` (tablet breakpoint)
+- `1440px` (desktop baseline)
+
+### Per-viewport checks
+
+1. Header: app title and back navigation are visible and do not cause horizontal scroll.
+2. Main screen layout: action list and response panel stack vertically below `768px`, side-by-side at `768px+`.
+3. Buttons and controls: touch targets are easy to tap on mobile and remain legible.
+4. Forms: inputs and labels remain full-width on mobile, with no clipped text.
+5. Tabs and dialogs: action type tabs remain scrollable, payload editor is usable on mobile.
+6. Notifications: toast messages are readable and dismissible at all viewport sizes.
+
+### Known Notes
+
+- NiceGUI responsive behaviour is validated primarily through CSS/Quasar class behaviour and manual viewport checks, not headless browser assertions.
+- If a viewport introduces horizontal overflow, inspect custom CSS in `app/src/static/styles.css` first.
 
 Run the full validation sequence in one go:
 

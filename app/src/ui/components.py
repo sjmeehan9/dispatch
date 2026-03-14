@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 from typing import TypeVar
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from nicegui import ui
 
@@ -31,6 +32,17 @@ _ACTION_STATUS_BADGE_MAP: dict[str, tuple[str, str]] = {
     ActionStatus.NOT_STARTED.value: ("Pending", "grey"),
     ActionStatus.DISPATCHED.value: ("Dispatched", "blue"),
     ActionStatus.COMPLETED.value: ("Complete", "green"),
+}
+
+_REDACTED_QUERY_KEYS = {
+    "token",
+    "access_token",
+    "api_key",
+    "apikey",
+    "key",
+    "secret",
+    "password",
+    "auth",
 }
 
 
@@ -117,6 +129,42 @@ def notify_warning(message: str) -> None:
     ui.notify(message, type="warning", close_button=True, timeout=5000)
 
 
+def _sanitize_url(url_value: str) -> str:
+    """Redact credential-like URL parts before rendering user-facing messages."""
+    parsed = urlsplit(url_value)
+    if not parsed.scheme or not parsed.netloc:
+        return url_value
+
+    netloc = parsed.netloc
+    if "@" in netloc:
+        _, host_part = netloc.rsplit("@", 1)
+        netloc = f"***@{host_part}"
+
+    redacted_query_items: list[tuple[str, str]] = []
+    for key, value in parse_qsl(parsed.query, keep_blank_values=True):
+        if key.lower() in _REDACTED_QUERY_KEYS:
+            redacted_query_items.append((key, "***"))
+        else:
+            redacted_query_items.append((key, value))
+
+    redacted_query = urlencode(redacted_query_items, doseq=True)
+    return urlunsplit((parsed.scheme, netloc, parsed.path, redacted_query, ""))
+
+
+def _sanitize_message(message: str) -> str:
+    """Redact URL credentials and sensitive query parameters in a message."""
+    words = message.split()
+    sanitized_words: list[str] = []
+    for word in words:
+        if word.startswith(("http://", "https://")):
+            sanitized_words.append(
+                _sanitize_url(word.rstrip(".,;")) + word[len(word.rstrip(".,;")) :]
+            )
+            continue
+        sanitized_words.append(word)
+    return " ".join(sanitized_words)
+
+
 def map_github_error(exc: Exception) -> str:
     """Map GitHub-related exceptions to user-facing error messages."""
     if isinstance(exc, GitHubAuthError):
@@ -125,18 +173,19 @@ def map_github_error(exc: Exception) -> str:
         return "Repository not found. Check the owner/repo format."
     if isinstance(exc, GitHubRateLimitError):
         return "GitHub API rate limit exceeded. Wait a few minutes and retry."
-    return f"GitHub API error: {exc}"
+    return f"GitHub API error: {_sanitize_message(str(exc))}"
 
 
 def map_executor_error(exc: Exception) -> str:
     """Map executor exceptions to actionable, user-facing messages."""
     if isinstance(exc, ExecutorConnectionError):
-        return f"Cannot reach executor at {exc.endpoint}. Is the executor running?"
+        endpoint = _sanitize_url(exc.endpoint)
+        return f"Cannot reach executor at {endpoint}. Is the executor running?"
     if isinstance(exc, ExecutorAuthError):
         return "Executor API key rejected. Check your API key in Manage Secrets."
     if isinstance(exc, ExecutorDispatchError):
-        return f"Executor error ({exc.status_code}): {exc.message}"
-    return f"Dispatch error: {exc}"
+        return f"Executor error ({exc.status_code}): {_sanitize_message(exc.message)}"
+    return f"Dispatch error: {_sanitize_message(str(exc))}"
 
 
 def action_type_icon(action_type: ActionType | str) -> tuple[str, str]:
