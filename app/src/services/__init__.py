@@ -25,6 +25,7 @@ from app.src.services.github_client import (
     GitHubNotFoundError,
     GitHubRateLimitError,
 )
+from app.src.services.llm_payload_generator import LLMPayloadGenerator
 from app.src.services.llm_service import LLMService
 from app.src.services.payload_resolver import PayloadResolver
 from app.src.services.project_service import (
@@ -53,6 +54,7 @@ __all__ = [
     "LLMAuthError",
     "LLMError",
     "LLMRateLimitError",
+    "LLMPayloadGenerator",
     "LLMService",
     "LLMServiceError",
     "LLMTimeoutError",

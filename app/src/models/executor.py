@@ -15,6 +15,7 @@ class ExecutorConfig(BaseModel):
     api_endpoint: AnyHttpUrl
     api_key_env_key: str
     webhook_url: AnyHttpUrl | None = None
+    use_llm: bool = False
 
     @field_validator("webhook_url", mode="before")
     @classmethod

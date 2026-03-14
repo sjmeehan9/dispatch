@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import re
-from typing import Iterable
+from dataclasses import dataclass
+from typing import Any, Iterable
 
 from pydantic import BaseModel, Field
 
@@ -48,3 +49,12 @@ class ResolvedPayload(BaseModel):
 
     payload: dict[str, object]
     unresolved_variables: list[str] = Field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class PayloadGenerationResult:
+    """Payload generation result with LLM usage metadata."""
+
+    payload: dict[str, Any]
+    llm_used: bool
+    fallback_reason: str | None = None
