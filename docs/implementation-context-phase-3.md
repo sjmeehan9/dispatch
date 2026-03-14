@@ -184,3 +184,31 @@
 
 ### Deviations
 - None.
+
+## Component 3.8 - Unit Tests, Validation & Phase Documentation
+- Verified comprehensive Phase 3 unit test coverage is present across:
+  - `tests/test_github_client.py`
+  - `tests/test_project_service.py`
+  - `tests/test_action_generator.py`
+  - `tests/test_payload_resolver.py`
+  - `tests/test_executor.py`
+  - `tests/test_webhook_service.py`
+- Ran full quality validation suite for Phase 3 scope:
+  - `black --check app/src/`
+  - `isort --check-only app/src/`
+  - `pytest -q --cov=app/src --cov-report=term-missing`
+  - `python scripts/evals.py`
+- Confirmed coverage threshold exceeded (`app/src/` coverage: 92%) and no regressions in existing tests.
+- Validated service-layer preconditions for E2E scenarios:
+  - **E2E-001 (configure/link/generate/dispatch)**: supported by config manager + project linking + action generation + executor dispatch tests.
+  - **E2E-002 (load/run phase)**: supported by project CRUD/list/load tests + action ordering tests.
+  - **E2E-003 (debug insertion/dispatch)**: supported by debug insertion tests + payload resolution + executor response handling tests.
+- Added Component 3.8 overview documentation in `docs/components/phase-3-component-3-8-overview.md`.
+
+### Decisions
+- Kept Component 3.8 code changes minimal because required service tests and validation coverage were already implemented in prior Phase 3 components.
+- Documented E2E readiness as service-layer preconditions only; full UI-driven E2E execution remains scheduled for Phase 4+.
+- Preserved secret-handling policy: no `.env/.env.local` file in the remote repository; CI/runtime secrets use GitHub repository or `copilot` environment secrets, with `TOKEN` mapped to runtime `GITHUB_TOKEN`.
+
+### Deviations
+- Validation executed in this sandbox with Python 3.12 due environment constraints, while project target remains Python 3.13+.
