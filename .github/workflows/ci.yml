@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  quality-checks:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Run Black
+        run: black --check app/src/
+
+      - name: Run isort
+        run: isort --check-only app/src/
+
+      - name: Run pytest
+        run: pytest -q --cov=app/src --cov-report=term-missing
+
+      - name: Run evals
+        run: python scripts/evals.py
