@@ -8,6 +8,7 @@ from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
 from nicegui import app, ui
 
+from app.src.ui.executor_config import render_executor_config
 from app.src.ui.initial_screen import render_initial_screen
 from app.src.ui.state import AppState
 
@@ -50,8 +51,8 @@ def initial_screen_page() -> None:
 
 @ui.page("/config/executor")
 def executor_config_page() -> None:
-    """Render the executor config route placeholder."""
-    ui.label("Executor config route")
+    """Render the executor configuration screen."""
+    render_executor_config(app_state)
 
 
 @ui.page("/config/action-types")

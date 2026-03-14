@@ -48,6 +48,19 @@ def test_all_required_routes_return_success(main_module: ModuleType) -> None:
             assert response.status_code == 200
 
 
+def test_executor_config_route_renders_form(main_module: ModuleType) -> None:
+    """Executor config route should render expected form labels."""
+    with TestClient(main_module.app) as client:
+        response = client.get("/config/executor")
+
+    assert response.status_code == 200
+    assert "Executor Configuration" in response.text
+    assert "Executor Name" in response.text
+    assert "API Endpoint URL" in response.text
+    assert "API Key Environment Variable" in response.text
+    assert "Webhook URL (optional)" in response.text
+
+
 def test_webhook_callback_stores_payload(main_module: ModuleType) -> None:
     """Webhook callback should persist payload data to WebhookService."""
     payload = {"run_id": "run-123", "status": "completed"}
