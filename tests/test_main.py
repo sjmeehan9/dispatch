@@ -27,6 +27,10 @@ def test_root_route_returns_success(main_module: ModuleType) -> None:
         response = client.get("/")
 
     assert response.status_code == 200
+    assert "Dispatch" in response.text
+    assert "Configure Executor" in response.text
+    assert "Link New Project" in response.text
+    assert "Load Project" in response.text
 
 
 def test_all_required_routes_return_success(main_module: ModuleType) -> None:

@@ -33,3 +33,29 @@
 
 ### Deviations
 - Validation and execution ran under Python 3.12 in this sandbox; project CI target remains Python 3.13+.
+
+## Component 4.2 - Initial Screen
+- Implemented `render_initial_screen(app_state)` in `app/src/ui/initial_screen.py`.
+- Added centered initial-screen layout using NiceGUI cards/columns with the title `Dispatch`.
+- Added configuration status indicators driven by `AppState`:
+  - Executor Config
+  - Action Type Defaults
+- Added navigation buttons for:
+  - `/config/executor`
+  - `/config/action-types`
+  - `/config/secrets`
+  - `/project/link`
+  - `/project/load`
+- Implemented config gatekeeping for project operations:
+  - `Link New Project` and `Load Project` are disabled unless `app_state.is_fully_configured` is `True`.
+- Updated `/` route in `app/src/main.py` to call `render_initial_screen(app_state)` instead of the placeholder label.
+- Added focused tests:
+  - `tests/test_initial_screen.py` verifies project button disable/enable logic by stubbing NiceGUI primitives.
+  - `tests/test_main.py` now asserts root response contains initial-screen content and expected navigation actions.
+
+### Decisions
+- Kept disable logic at render time (not reactive state mutation) so revisiting `/` naturally reflects latest persisted configuration.
+- Encapsulated repeated UI fragments into internal helpers (`_status_row`, `_project_button`) for readability without expanding public API surface.
+
+### Deviations
+- None.
