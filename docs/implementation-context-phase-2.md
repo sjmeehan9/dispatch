@@ -33,3 +33,20 @@
 
 ### Deviations
 - Validation was executed with host Python 3.12 because the repository's Python 3.13 `.venv` is not present in this sandbox; tests passed and formatting checks were run on changed files.
+
+## Component 2.3 - Config & Secrets Manager Service
+- Implemented `ConfigManager` in `app/src/services/config_manager.py` to manage executor config, action type defaults, and local secrets.
+- Added JSON persistence for `ExecutorConfig` and `ActionTypeDefaults` under `~/.dispatch/config/` with atomic write semantics (`.tmp` then replace) to reduce sync corruption risk.
+- Implemented default bootstrap flow: when config files are missing, manager loads bundled defaults from `app/config/defaults.yaml`, persists them, and returns validated model instances.
+- Implemented secrets write/update via `python-dotenv` `set_key()` against `.env/.env.local`, creating parent directories/files as needed so committed env files are not required.
+- Implemented `list_secret_keys()` returning key names only (no values) and `has_config()` to verify both config JSON files are present.
+- Added INFO-level structured logs for config/default file operations using file paths only; secret values are never logged.
+- Added bundled defaults file `app/config/defaults.yaml` with Autopilot executor defaults and all five action-type payload templates.
+- Added focused tests in `tests/test_config_manager.py` for round-trip persistence, default bootstrap, secret write/update behavior, key listing, config presence checks, and atomic JSON write behavior.
+
+### Decisions
+- Kept secrets optional and local-file-based at runtime while preserving CI compatibility with GitHub repository/environment secrets (`TOKEN` alias handled in `Settings`).
+- Used model validation (`model_validate`) at all load boundaries to fail fast on malformed JSON/YAML.
+
+### Deviations
+- None.

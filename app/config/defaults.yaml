@@ -1,0 +1,57 @@
+executor_config:
+  executor_id: autopilot
+  executor_name: Autopilot
+  api_endpoint: http://localhost:8000/agent/run
+  api_key_env_key: AUTOPILOT_API_KEY
+  webhook_url: null
+action_type_defaults:
+  implement:
+    repository: "{{repository}}"
+    branch: "{{branch}}"
+    role: implement
+    agent_instructions: "Implement Component {{component_id}}"
+    agent_paths:
+      - "{{implement_agent_path}}"
+    model: "{{model}}"
+    callback_url: "{{callback_url}}"
+    timeout_minutes: 20
+  test:
+    repository: "{{repository}}"
+    branch: "{{branch}}"
+    role: test
+    agent_instructions: "Execute tests for Phase {{phase_id}}"
+    agent_paths:
+      - "{{test_agent_path}}"
+    model: "{{model}}"
+    callback_url: "{{callback_url}}"
+    timeout_minutes: 20
+  review:
+    repository: "{{repository}}"
+    branch: "{{branch}}"
+    role: review
+    agent_instructions: "Review code changes for Phase {{phase_id}}"
+    agent_paths:
+      - "{{review_agent_path}}"
+    model: "{{model}}"
+    callback_url: "{{callback_url}}"
+    timeout_minutes: 20
+  document:
+    repository: "{{repository}}"
+    branch: "{{branch}}"
+    role: document
+    agent_instructions: "Document completion for Phase {{phase_id}}"
+    agent_paths:
+      - "{{document_agent_path}}"
+    model: "{{model}}"
+    callback_url: "{{callback_url}}"
+    timeout_minutes: 20
+  debug:
+    repository: "{{repository}}"
+    branch: "{{branch}}"
+    role: debug
+    agent_instructions: "Diagnose and resolve issue: {{issue_summary}}"
+    agent_paths:
+      - "{{debug_agent_path}}"
+    model: "{{model}}"
+    callback_url: "{{callback_url}}"
+    timeout_minutes: 20
