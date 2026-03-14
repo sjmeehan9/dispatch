@@ -34,7 +34,8 @@ Dispatch is a local-first desktop application for orchestrating AI agent executi
 
 - Configure executor endpoint, authentication key, and optional webhook URL.
 - Configure default payload templates for Implement, Test, Review, Document, and Debug action types.
-- Configure project secrets locally. In GitHub Actions, store token as `TOKEN` and map it to runtime `GITHUB_TOKEN`.
+- Configure project secrets locally in an untracked `.env/.env.local` file; never commit this file to the repository.
+- In GitHub Actions, store secrets in repository or `copilot` environment secrets. Use `TOKEN` for the GitHub token secret and map it to runtime `GITHUB_TOKEN`.
 
 ## Usage Outline
 
