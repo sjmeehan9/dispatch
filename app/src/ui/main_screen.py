@@ -436,6 +436,32 @@ def _filter_grouped_actions(
     return [group for group in grouped_actions if group[0] == phase_id]
 
 
+def _group_by_component(
+    actions: list[Action],
+) -> tuple[list[tuple[str, list[Action]]], list[Action]]:
+    """Split phase actions into per-component groups and phase-level actions.
+
+    Returns:
+        A tuple of (component_groups, phase_level_actions) where component_groups
+        is a list of (component_id, actions) tuples preserving original ordering.
+    """
+    component_order: list[str] = []
+    component_map: dict[str, list[Action]] = {}
+    phase_level: list[Action] = []
+
+    for action in actions:
+        if action.component_id is None:
+            phase_level.append(action)
+        else:
+            if action.component_id not in component_map:
+                component_order.append(action.component_id)
+                component_map[action.component_id] = []
+            component_map[action.component_id].append(action)
+
+    component_groups = [(cid, component_map[cid]) for cid in component_order]
+    return component_groups, phase_level
+
+
 def _requires_redispatch_confirmation(action: Action) -> bool:
     """Return whether dispatch should require user confirmation."""
     return action.status in (ActionStatus.DISPATCHED, ActionStatus.COMPLETED)
@@ -503,7 +529,7 @@ def _render_action_list(
     llm_generation_overlay: LoadingOverlay,
     refresh_response_panel: Callable[[], None] | None = None,
 ) -> None:
-    """Render the left-panel phase-grouped action list."""
+    """Render the left-panel phase-grouped action list with card-based layout."""
     if app_state.current_project is None:
         ui.label("No project loaded.").classes("text-negative")
         return
@@ -548,72 +574,65 @@ def _render_action_list(
                 1 for action in actions if action.status == ActionStatus.COMPLETED
             )
             phase_total = len(actions)
-            with ui.expansion(f"Phase {phase_id}: {phase_name}", value=True).classes(
-                "w-full"
+            all_complete = phase_completed == phase_total
+
+            with ui.card().classes(
+                f"w-full dispatch-phase-card"
+                f"{' dispatch-phase-complete' if all_complete else ''}"
             ):
-                with ui.row().classes("w-full justify-end q-px-sm q-pt-sm"):
-                    ui.badge(f"{phase_completed}/{phase_total}").props(
-                        'color="primary" text-color="white"'
-                    )
+                # Phase header
+                with ui.element("div").classes("dispatch-phase-header"):
+                    with ui.row().classes(
+                        "w-full items-center justify-between q-px-md q-py-sm"
+                    ):
+                        with ui.row().classes("items-center q-gutter-sm"):
+                            ui.icon("check_circle" if all_complete else "folder").props(
+                                f'color="{"positive" if all_complete else "primary"}"'
+                            )
+                            ui.label(f"Phase {phase_id}: {phase_name}").classes(
+                                "text-subtitle1 text-weight-bold"
+                            )
+                        ui.badge(f"{phase_completed}/{phase_total}").props(
+                            'color="primary" text-color="white"'
+                        )
 
-                with ui.list().classes("w-full"):
-                    for action in actions:
-                        with ui.item().classes("w-full"):
-                            with ui.item_section().classes("w-full"):
-                                with ui.row().classes(
-                                    "w-full items-center justify-between no-wrap q-gutter-sm"
-                                ):
-                                    with ui.row().classes("items-center q-gutter-sm"):
-                                        icon_name, icon_color = action_type_icon(
-                                            action.action_type
-                                        )
-                                        ui.icon(icon_name).props(
-                                            f'color="{icon_color}"'
-                                        )
-                                        ui.label(
-                                            _action_label(
-                                                app_state.current_project, action
-                                            )
-                                        ).classes("text-body2")
-                                    action_status_badge(action.status)
-                            with ui.item_section().props("side"):
-                                dispatch_button = ui.button(
-                                    "Dispatch",
-                                    icon="send",
-                                    on_click=lambda current_action=action: _request_dispatch(
-                                        current_action
-                                    ),
-                                    color="primary",
-                                ).props("dense")
-                                if dispatching_action_id == action.action_id:
-                                    dispatch_button.props("loading")
+                # Action items grouped by component
+                with ui.column().classes("w-full q-pa-sm q-gutter-xs"):
+                    component_groups, phase_level_actions = _group_by_component(actions)
 
-                                complete_button = ui.button(
-                                    "Mark Complete",
-                                    icon="check_circle",
-                                    on_click=lambda current_action=action: _handle_mark_complete(
-                                        current_action
-                                    ),
-                                    color="positive",
-                                ).props("dense outline")
-                                if action.status == ActionStatus.COMPLETED:
-                                    complete_button.props("disable")
-                                if completing_action_id == action.action_id:
-                                    complete_button.props("loading")
+                    for component_id, component_actions in component_groups:
+                        component_name = _resolve_component_name(
+                            app_state.current_project, component_actions[0]
+                        )
+                        with ui.element("div").classes("dispatch-component-group"):
+                            ui.label(component_name).classes(
+                                "text-caption text-grey-7 q-pl-sm"
+                            )
+                            for action in component_actions:
+                                _render_action_card(
+                                    app_state,
+                                    project_service,
+                                    action,
+                                    dispatching_action_id,
+                                    completing_action_id,
+                                    refresh_response_panel,
+                                )
 
-                                ui.button(
-                                    icon="edit",
-                                    on_click=lambda current_action=action: _show_payload_editor(
-                                        app_state,
-                                        project_service,
-                                        current_action,
-                                        _render_action_list.refresh,
-                                        refresh_response_panel,
-                                    ),
-                                    color="secondary",
-                                ).props("dense flat")
+                    if phase_level_actions:
+                        if component_groups:
+                            ui.separator().classes("q-my-sm")
+                        for action in phase_level_actions:
+                            _render_action_card(
+                                app_state,
+                                project_service,
+                                action,
+                                dispatching_action_id,
+                                completing_action_id,
+                                refresh_response_panel,
+                            )
 
-                with ui.row().classes("w-full justify-end q-mt-sm"):
+                # Add Debug button
+                with ui.row().classes("w-full justify-end q-px-sm q-pb-sm"):
                     ui.button(
                         "Add Debug",
                         icon="bug_report",
@@ -627,7 +646,74 @@ def _render_action_list(
                             _render_action_list.refresh,
                             refresh_response_panel,
                         ),
-                    ).props("outline")
+                    ).props("outline dense")
+
+    def _render_action_card(
+        app_state: AppState,
+        project_service: ProjectService,
+        action: Action,
+        dispatching_action_id: str | None,
+        completing_action_id: str | None,
+        refresh_response_panel: Callable[[], None] | None,
+    ) -> None:
+        """Render a single action as a styled card with left-border colour coding."""
+        status_class = ""
+        if action.status == ActionStatus.COMPLETED:
+            status_class = " dispatch-action-completed"
+        elif action.status == ActionStatus.DISPATCHED:
+            status_class = " dispatch-action-dispatched"
+
+        action_type_value = str(action.action_type)
+        with (
+            ui.card()
+            .classes(
+                f"w-full q-pa-sm dispatch-action-card"
+                f" dispatch-action-{action_type_value}{status_class}"
+            )
+            .props("flat bordered")
+        ):
+            with ui.row().classes("w-full items-center justify-between no-wrap"):
+                with ui.row().classes("items-center q-gutter-sm"):
+                    icon_name, icon_color = action_type_icon(action.action_type)
+                    ui.icon(icon_name).props(f'color="{icon_color}" size="sm"')
+                    ui.label(_action_label(app_state.current_project, action)).classes(
+                        "text-body2 text-weight-medium"
+                    )
+                    action_status_badge(action.status)
+                with ui.row().classes("items-center q-gutter-xs"):
+                    dispatch_button = ui.button(
+                        icon="send",
+                        on_click=lambda current_action=action: _request_dispatch(
+                            current_action
+                        ),
+                        color="primary",
+                    ).props("dense flat round size=sm")
+                    if dispatching_action_id == action.action_id:
+                        dispatch_button.props("loading")
+
+                    complete_button = ui.button(
+                        icon="check_circle",
+                        on_click=lambda current_action=action: _handle_mark_complete(
+                            current_action
+                        ),
+                        color="positive",
+                    ).props("dense flat round size=sm")
+                    if action.status == ActionStatus.COMPLETED:
+                        complete_button.props("disable")
+                    if completing_action_id == action.action_id:
+                        complete_button.props("loading")
+
+                    ui.button(
+                        icon="edit",
+                        on_click=lambda current_action=action: _show_payload_editor(
+                            app_state,
+                            project_service,
+                            current_action,
+                            _render_action_list.refresh,
+                            refresh_response_panel,
+                        ),
+                        color="secondary",
+                    ).props("dense flat round size=sm")
 
     def _request_dispatch(action: Action) -> None:
         client = ui.context.client
@@ -769,6 +855,17 @@ def _show_insert_debug_dialog(
     dialog.open()
 
 
+def _response_header_class(status_code: int) -> str:
+    """Return the CSS class for a response panel header based on status code."""
+    if status_code == 0:
+        return "dispatch-response-header dispatch-response-header-pending"
+    if 200 <= status_code < 300:
+        return "dispatch-response-header dispatch-response-header-success"
+    if status_code >= 400:
+        return "dispatch-response-header dispatch-response-header-error"
+    return "dispatch-response-header dispatch-response-header-dispatched"
+
+
 @ui.refreshable
 def _render_response_panel(
     app_state: AppState,
@@ -784,83 +881,144 @@ def _render_response_panel(
         executor_config = None
 
     with ui.column().classes("w-full q-gutter-md"):
-        with ui.card().classes("w-full q-pa-md"):
-            ui.label("Executor Response").classes("text-h6")
+        # ── Executor Response card ──
+        with ui.card().classes("w-full"):
             if current_action is None or current_action.executor_response is None:
-                ui.label("No action dispatched yet.").classes("text-grey-7")
+                with ui.element("div").classes(
+                    "dispatch-response-header dispatch-response-header-pending"
+                ):
+                    ui.label("Executor Response").classes(
+                        "text-subtitle1 text-weight-bold"
+                    )
+                with ui.element("div").classes("q-pa-md"):
+                    ui.label("No action dispatched yet.").classes("text-grey-7")
             else:
                 status_code = int(
                     current_action.executor_response.get("status_code", 0)
                 )
                 message = str(current_action.executor_response.get("message", ""))
-                ui.label(f"Response: {status_code}").classes(
-                    _response_color_class(status_code)
-                )
-                ui.label(f"Message: {message}")
+                with ui.element("div").classes(_response_header_class(status_code)):
+                    with ui.row().classes("items-center justify-between"):
+                        ui.label("Executor Response").classes(
+                            "text-subtitle1 text-weight-bold"
+                        )
+                        ui.badge(str(status_code)).props(
+                            f'color="{"positive" if 200 <= status_code < 300 else "negative"}"'
+                            ' text-color="white"'
+                        )
+                with ui.element("div").classes("q-pa-md"):
+                    ui.label(message).classes("text-body2")
 
-                run_id = _extract_run_id(current_action)
-                if run_id is not None:
-                    ui.label(f"Run ID: {run_id}").classes("text-caption text-grey-7")
+                    run_id = _extract_run_id(current_action)
+                    if run_id is not None:
+                        with ui.row().classes("items-center q-gutter-xs q-mt-sm"):
+                            ui.label("Run ID:").classes("text-caption text-grey-7")
+                            ui.label(run_id).classes("text-caption text-weight-medium")
+                            ui.button(
+                                icon="content_copy",
+                                on_click=lambda: ui.run_javascript(
+                                    f"navigator.clipboard.writeText('{run_id}')"
+                                ),
+                            ).props("dense flat round size=xs")
 
+        # ── Webhook Response card ──
         has_webhook_url = (
             executor_config is not None and executor_config.webhook_url is not None
         )
         if has_webhook_url:
-            with ui.card().classes("w-full q-pa-md"):
-                ui.label("Webhook Response").classes("text-h6")
-
+            with ui.card().classes("w-full"):
                 if current_action is None or current_action.executor_response is None:
-                    ui.label("No action dispatched yet.").classes("text-grey-7")
+                    with ui.element("div").classes(
+                        "dispatch-response-header dispatch-response-header-pending"
+                    ):
+                        ui.label("Webhook Response").classes(
+                            "text-subtitle1 text-weight-bold"
+                        )
+                    with ui.element("div").classes("q-pa-md"):
+                        ui.label("No action dispatched yet.").classes("text-grey-7")
                 else:
                     run_id = _extract_run_id(current_action)
-                    if run_id is None:
-                        ui.label("No run ID; webhook polling unavailable.").classes(
-                            "text-warning"
-                        )
-                    elif current_action.webhook_response is None:
-                        ui.label("Waiting for webhook response...").classes(
-                            "text-grey-7"
-                        )
 
-                        async def _refresh_webhook() -> None:
-                            webhook_payload = _poll_webhook(app_state, run_id)
-                            if webhook_payload is None:
-                                notify_warning("Webhook response not available yet.")
-                                _render_response_panel.refresh()
-                                return
-
-                            current_action.webhook_response = webhook_payload
-                            _try_propagate_pr_number(app_state, current_action)
-                            if app_state.current_project is not None:
-                                try:
-                                    await run.io_bound(
-                                        project_service.save_project,
-                                        app_state.current_project,
-                                    )
-                                except OSError as exc:
-                                    notify_warning(
-                                        f"Webhook received but save failed: {exc}"
-                                    )
-
-                            _render_response_panel.refresh()
-                            refresh_action_list()
-
-                        ui.button(
-                            "Refresh",
-                            icon="refresh",
-                            on_click=_refresh_webhook,
-                            color="secondary",
-                        )
-                    else:
+                    if current_action.webhook_response is not None:
                         webhook_status = current_action.webhook_response.get(
                             "status_code"
-                        ) or current_action.webhook_response.get("status")
-                        webhook_message = current_action.webhook_response.get(
-                            "message"
-                        ) or current_action.webhook_response.get("result")
-                        ui.label(f"Status: {webhook_status}")
-                        ui.label(f"Message: {webhook_message}")
+                        ) or current_action.webhook_response.get("status", "")
+                        webhook_status_int = (
+                            int(webhook_status) if str(webhook_status).isdigit() else 0
+                        )
+                        header_cls = _response_header_class(webhook_status_int)
+                    else:
+                        header_cls = (
+                            "dispatch-response-header"
+                            " dispatch-response-header-dispatched"
+                        )
 
+                    with ui.element("div").classes(header_cls):
+                        with ui.row().classes("items-center justify-between"):
+                            ui.label("Webhook Response").classes(
+                                "text-subtitle1 text-weight-bold"
+                            )
+                            # PR chip when known
+                            pr_number = _extract_pr_number_from_webhook(current_action)
+                            if pr_number is not None:
+                                ui.chip(f"PR #{pr_number}", icon="merge").props(
+                                    'color="green" text-color="white" dense'
+                                )
+
+                    with ui.element("div").classes("q-pa-md"):
+                        if run_id is None:
+                            ui.label("No run ID; webhook polling unavailable.").classes(
+                                "text-warning"
+                            )
+                        elif current_action.webhook_response is None:
+                            ui.label("Waiting for webhook response...").classes(
+                                "text-grey-7"
+                            )
+
+                            async def _refresh_webhook() -> None:
+                                webhook_payload = _poll_webhook(app_state, run_id)
+                                if webhook_payload is None:
+                                    notify_warning(
+                                        "Webhook response not available yet."
+                                    )
+                                    _render_response_panel.refresh()
+                                    return
+
+                                current_action.webhook_response = webhook_payload
+                                _try_propagate_pr_number(app_state, current_action)
+                                if app_state.current_project is not None:
+                                    try:
+                                        await run.io_bound(
+                                            project_service.save_project,
+                                            app_state.current_project,
+                                        )
+                                    except OSError as exc:
+                                        notify_warning(
+                                            f"Webhook received but save failed: {exc}"
+                                        )
+
+                                _render_response_panel.refresh()
+                                refresh_action_list()
+
+                            ui.button(
+                                "Refresh",
+                                icon="refresh",
+                                on_click=_refresh_webhook,
+                                color="secondary",
+                            ).props("outline")
+                        else:
+                            webhook_status = current_action.webhook_response.get(
+                                "status_code"
+                            ) or current_action.webhook_response.get("status")
+                            webhook_message = current_action.webhook_response.get(
+                                "message"
+                            ) or current_action.webhook_response.get("result")
+                            ui.label(f"Status: {webhook_status}").classes("text-body2")
+                            ui.label(f"Result: {webhook_message}").classes(
+                                "text-body2 q-mt-xs"
+                            )
+
+        # ── Mark Complete button ──
         if current_action is not None:
 
             async def _mark_current_action_complete() -> None:
@@ -941,7 +1099,7 @@ def render_main_screen(app_state: AppState, project_id: str) -> None:
                 )
 
         with ui.element("div").classes(
-            "row q-col-gutter-md w-full dispatch-mobile-grid"
+            "row q-col-gutter-md w-full dispatch-mobile-grid dispatch-main-panels"
         ):
             with ui.element("div").classes("col-12 col-md-5 dispatch-mobile-stack"):
                 with ui.scroll_area().classes("w-full dispatch-panel-scroll"):

@@ -35,7 +35,7 @@
 
 ---
 
-## Component 7.2 - Cross-Device Verification & Merge Action Type
+## Component 7.2 - Cross-Device Verification, Merge Action Type & UI Modernisation
 
 - Status: In Progress (human cross-device testing pending)
 - Date: 2026-03-15
@@ -56,6 +56,15 @@
 - Updated UI: merge icon/colour in components.py, merge in action_type_defaults screen, component-scoped labels for review/merge actions.
 - Updated review `agent_instructions` in defaults.yaml to be component-scoped.
 
+**UI Modernisation — Phase C (per implementation-plan-merge-action-and-ui-modernisation.md):**
+- Rewrote `styles.css` with full-height panels, action card styles with colour-coded left borders, phase card styles with gradient headers, component group separators, dispatch pulse animation, and response panel status-coloured headers.
+- Replaced flat `ui.list()`/`ui.item()` action rendering with card-based `ui.card()` layout, each action card colour-coded by type with hover effects and status animations.
+- Introduced `_group_by_component()` helper to split phase actions into per-component groups (implement→review→merge triplets) and phase-level actions (test, document).
+- Replaced `ui.expansion()` phase sections with styled `ui.card()` phase cards featuring gradient headers, completion icons, and progress badges.
+- Modernised `_render_response_panel` with status-coloured header bars (green/red/blue/grey), run ID with clipboard copy button, and PR number chip on webhook responses.
+- Replaced `progress_summary` linear progress bar with `ui.circular_progress` and remaining-count labels.
+- Added `_response_header_class()` helper mapping status codes to CSS header classes.
+
 ### Key Files Created/Modified
 
 - app/src/models/project.py (modified — MERGE enum member)
@@ -67,8 +76,11 @@
 - app/src/ui/main_screen.py (modified — propagation wiring, component-scoped labels)
 - app/src/ui/action_type_defaults.py (modified — merge in type list and variable hints)
 - app/src/main.py (modified — host="0.0.0.0")
+- app/src/static/styles.css (modified — full-height panels, action/phase cards, animations, response headers)
+- app/src/ui/components.py (modified — merge icon, circular progress_summary)
+- app/src/ui/main_screen.py (modified — card layout, component grouping, modernised response panel)
 - docs/cross-device-verification.md (created)
-- 10 test files updated with merge fixtures and new assertions
+- 12 test files updated with merge fixtures, new assertions, and UI modernisation tests
 
 ### Design Decisions
 
@@ -76,7 +88,12 @@
 - Per-component review/merge grouping chosen over phase-level review to align with the PR-per-component workflow model.
 - PR propagation writes `pr_number` as a string into the payload dict, keeping it consistent with all other payload variable substitution.
 - Backward compat in ConfigManager injects merge defaults from bundled YAML rather than hardcoding, so template updates flow automatically.
+- Card-based action layout with `ui.card()` preferred over `ui.list()`/`ui.item()` for visual distinction and per-type colour coding.
+- Component grouping renders triplets (implement→review→merge) under a shared component label, then phase-level actions below a separator.
+- Phase cards use gradient backgrounds with completion-state colour variants rather than plain expansions.
+- Circular progress replaces linear progress for a more compact, informative summary widget.
+- Response panel uses status-coloured header divs rather than inline text colour classes for stronger visual hierarchy.
 
 ### Deviations From Spec
 
-- None. All AI-agent deliverables for Phases A and B implemented as specified.
+- None. All AI-agent deliverables for Phases A, B, and C implemented as specified.

@@ -112,6 +112,19 @@ class _FakeUI:
         self.badges.append(text)
         return _FakeContext()
 
+    def column(self) -> _FakeContext:
+        return _FakeContext()
+
+    def circular_progress(
+        self,
+        value: float = 0.0,
+        show_value: bool = False,
+        min: float = 0.0,
+        max: float = 1.0,
+    ) -> _FakeContext:
+        self.progress_values.append(value)
+        return _FakeContext()
+
     def linear_progress(self, value: float) -> _FakeContext:
         self.progress_values.append(value)
         return _FakeContext()
@@ -274,8 +287,8 @@ def test_progress_counts_calculates_completion_ratio() -> None:
     assert ratio == 0.5
 
 
-def test_progress_summary_renders_label_and_progress_value() -> None:
-    """Progress summary should render completion label and linear progress value."""
+def test_progress_summary_renders_circular_progress_and_labels() -> None:
+    """Progress summary should render circular progress and completion labels."""
     fake_ui = _FakeUI()
     actions = [
         Action(
@@ -296,5 +309,6 @@ def test_progress_summary_renders_label_and_progress_value() -> None:
 
     components.progress_summary(actions, ui_module=fake_ui)
 
-    assert "1 of 2 actions complete" in fake_ui.labels
+    assert "1 of 2 complete" in fake_ui.labels
+    assert "1 remaining" in fake_ui.labels
     assert fake_ui.progress_values == [0.5]

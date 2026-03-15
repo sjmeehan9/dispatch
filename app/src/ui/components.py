@@ -220,13 +220,20 @@ def progress_counts(actions: list[Action]) -> tuple[int, int, float]:
 
 
 def progress_summary(actions: list[Action], ui_module: object | None = None) -> None:
-    """Render completion summary text and progress bar for an action list."""
+    """Render circular progress with completion summary for an action list."""
     active_ui = ui_module or ui
     completed, total, ratio = progress_counts(actions)
-    active_ui.label(f"{completed} of {total} actions complete").classes(
-        "text-subtitle2 text-weight-medium"
-    )
-    active_ui.linear_progress(value=ratio).props("color=primary stripe rounded")
+    with active_ui.row().classes("w-full items-center q-gutter-sm"):
+        active_ui.circular_progress(
+            value=ratio, show_value=True, min=0.0, max=1.0
+        ).props('size="50px" color="primary"')
+        with active_ui.column():
+            active_ui.label(f"{completed} of {total} complete").classes(
+                "text-subtitle2"
+            )
+            active_ui.label(f"{total - completed} remaining").classes(
+                "text-caption text-grey-7"
+            )
 
 
 def confirm_redispatch(

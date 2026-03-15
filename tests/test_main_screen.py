@@ -502,7 +502,9 @@ def test_is_llm_dispatch_enabled_checks_toggle_and_availability() -> None:
     assert disabled_by_key is False
 
 
-def test_prepare_payload_for_dispatch_review_returns_standard_when_llm_disabled() -> None:
+def test_prepare_payload_for_dispatch_review_returns_standard_when_llm_disabled() -> (
+    None
+):
     """Pre-dispatch preparation should use deterministic resolver when LLM toggle is off."""
     project = _sample_project()
     action = project.actions[0]
@@ -535,6 +537,79 @@ def test_prepare_payload_for_dispatch_review_returns_standard_when_llm_disabled(
     assert payload == {"repository": "owner/repo"}
     assert llm_used is False
     assert fallback_reason is None
+
+
+def test_group_by_component_separates_component_and_phase_level_actions() -> None:
+    """Component grouping helper should split actions by component and preserve order."""
+    actions = [
+        Action(
+            action_id="a1",
+            phase_id=1,
+            component_id="1.1",
+            action_type=ActionType.IMPLEMENT,
+            payload={},
+            status=ActionStatus.NOT_STARTED,
+        ),
+        Action(
+            action_id="a2",
+            phase_id=1,
+            component_id="1.1",
+            action_type=ActionType.REVIEW,
+            payload={},
+            status=ActionStatus.NOT_STARTED,
+        ),
+        Action(
+            action_id="a3",
+            phase_id=1,
+            component_id="1.1",
+            action_type=ActionType.MERGE,
+            payload={},
+            status=ActionStatus.NOT_STARTED,
+        ),
+        Action(
+            action_id="a4",
+            phase_id=1,
+            component_id="1.2",
+            action_type=ActionType.IMPLEMENT,
+            payload={},
+            status=ActionStatus.NOT_STARTED,
+        ),
+        Action(
+            action_id="a5",
+            phase_id=1,
+            component_id=None,
+            action_type=ActionType.TEST,
+            payload={},
+            status=ActionStatus.NOT_STARTED,
+        ),
+        Action(
+            action_id="a6",
+            phase_id=1,
+            component_id=None,
+            action_type=ActionType.DOCUMENT,
+            payload={},
+            status=ActionStatus.NOT_STARTED,
+        ),
+    ]
+
+    component_groups, phase_level = main_screen._group_by_component(actions)
+
+    assert len(component_groups) == 2
+    assert component_groups[0][0] == "1.1"
+    assert [a.action_id for a in component_groups[0][1]] == ["a1", "a2", "a3"]
+    assert component_groups[1][0] == "1.2"
+    assert [a.action_id for a in component_groups[1][1]] == ["a4"]
+    assert [a.action_id for a in phase_level] == ["a5", "a6"]
+
+
+def test_response_header_class_maps_status_codes() -> None:
+    """Response header class helper should return correct CSS class for each range."""
+    assert "pending" in main_screen._response_header_class(0)
+    assert "success" in main_screen._response_header_class(200)
+    assert "success" in main_screen._response_header_class(202)
+    assert "error" in main_screen._response_header_class(400)
+    assert "error" in main_screen._response_header_class(500)
+    assert "dispatched" in main_screen._response_header_class(301)
 
 
 def test_prepare_payload_for_dispatch_review_uses_llm_generator_when_enabled(
