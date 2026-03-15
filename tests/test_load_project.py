@@ -86,6 +86,9 @@ class _FakeUI:
     def separator(self) -> _FakeContext:
         return _FakeContext()
 
+    def icon(self, _: str) -> _FakeContext:
+        return _FakeContext()
+
     def label(self, text: str) -> _FakeLabel:
         self.labels.append(text)
         return _FakeLabel(text)

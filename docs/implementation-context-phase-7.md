@@ -65,6 +65,22 @@
 - Replaced `progress_summary` linear progress bar with `ui.circular_progress` and remaining-count labels.
 - Added `_response_header_class()` helper mapping status codes to CSS header classes.
 
+**UI Modernisation — Phase D (Global & Other Screens):**
+- Added global CSS refinements: consistent card border-radius (12px), button border-radius (8px) with non-uppercase text-transform, input field border-radius (8px).
+- Modernised header with dark indigo gradient (`#1a237e` → `#283593`), white text, and semi-transparent separators.
+- Polished initial screen: added rocket icon to title, section heading icons (settings, play_circle), and icons to navigation buttons (dns, tune, vpn_key).
+- Polished executor config: added dns icon to section heading.
+- Polished action type defaults: added tune icon to section heading.
+- Polished secrets screen: added vpn_key icon to section heading with info callout using styled row.
+- Polished link project: added link icon to section heading.
+- Polished load project: added folder_open icon to section heading.
+
+**Testing & Validation — Phase E:**
+- Full test suite: 216 passed, 1 skipped, no regressions.
+- Evals: 0 violations (docstring + placeholder checks pass).
+- Formatting: Black + isort clean for `app/src/`.
+- Updated 4 test `_FakeUI` stubs (test_action_type_defaults, test_executor_config, test_secrets_screen, test_load_project) to add `icon()` method needed by new UI polish.
+
 ### Key Files Created/Modified
 
 - app/src/models/project.py (modified — MERGE enum member)
@@ -72,15 +88,22 @@
 - app/config/defaults.yaml (modified — merge template, review instructions)
 - app/src/services/action_generator.py (modified — restructured generation, propagate_pr_number)
 - app/src/services/config_manager.py (modified — backward compat merge injection)
-- app/src/ui/components.py (modified — merge icon mapping)
-- app/src/ui/main_screen.py (modified — propagation wiring, component-scoped labels)
-- app/src/ui/action_type_defaults.py (modified — merge in type list and variable hints)
+- app/src/ui/components.py (modified — merge icon, circular progress, dark header)
+- app/src/ui/main_screen.py (modified — card layout, component grouping, response panel)
+- app/src/ui/action_type_defaults.py (modified — merge in type list, section icon)
+- app/src/ui/executor_config.py (modified — section icon)
+- app/src/ui/initial_screen.py (modified — title icon, section icons, button icons)
+- app/src/ui/secrets_screen.py (modified — section icon, info callout)
+- app/src/ui/link_project.py (modified — section icon)
+- app/src/ui/load_project.py (modified — section icon)
 - app/src/main.py (modified — host="0.0.0.0")
-- app/src/static/styles.css (modified — full-height panels, action/phase cards, animations, response headers)
-- app/src/ui/components.py (modified — merge icon, circular progress_summary)
-- app/src/ui/main_screen.py (modified — card layout, component grouping, modernised response panel)
+- app/src/static/styles.css (modified — global refinements, dark header, all Phase C + D styles)
 - docs/cross-device-verification.md (created)
-- 12 test files updated with merge fixtures, new assertions, and UI modernisation tests
+- tests/test_action_type_defaults.py (modified — FakeUI icon stub)
+- tests/test_executor_config.py (modified — FakeUI icon stub)
+- tests/test_secrets_screen.py (modified — FakeUI icon + style stubs)
+- tests/test_load_project.py (modified — FakeUI icon stub)
+- 12 additional test files updated with merge fixtures and UI modernisation tests
 
 ### Design Decisions
 
@@ -93,7 +116,11 @@
 - Phase cards use gradient backgrounds with completion-state colour variants rather than plain expansions.
 - Circular progress replaces linear progress for a more compact, informative summary widget.
 - Response panel uses status-coloured header divs rather than inline text colour classes for stronger visual hierarchy.
+- Dark indigo header gradient chosen for visual authority and contrast against white card content.
+- Section heading icons added to every screen for consistent visual language.
+- Global card/button/input refinements applied via CSS rather than inline Quasar props for maintainability.
+- Info callout on secrets screen uses styled row with background rather than a separate alert component.
 
 ### Deviations From Spec
 
-- None. All AI-agent deliverables for Phases A, B, and C implemented as specified.
+- None. All AI-agent deliverables for Phases A, B, C, D, and E implemented as specified.

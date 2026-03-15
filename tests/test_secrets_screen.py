@@ -24,6 +24,9 @@ class _FakeContext:
     def props(self, _: str) -> _FakeContext:
         return self
 
+    def style(self, _: str) -> _FakeContext:
+        return self
+
 
 class _FakeInput(_FakeContext):
     """Fake input control with value and placeholder support."""
@@ -84,6 +87,9 @@ class _FakeUI:
     def separator(self) -> _FakeContext:
         return _FakeContext()
 
+    def icon(self, _: str) -> _FakeContext:
+        return _FakeContext()
+
     def label(self, text: str) -> _FakeContext:
         self.labels.append(text)
         return _FakeContext()
@@ -133,9 +139,7 @@ def _build_app_state() -> tuple[SimpleNamespace, list[tuple[str, str]], dict[str
             get_secret=lambda key: (
                 "existing-value"
                 if key == "GITHUB_TOKEN"
-                else "gpt-4o-mini"
-                if key == "OPENAI_MODEL"
-                else None
+                else "gpt-4o-mini" if key == "OPENAI_MODEL" else None
             )
         ),
         config_manager=SimpleNamespace(set_secret=_set_secret),

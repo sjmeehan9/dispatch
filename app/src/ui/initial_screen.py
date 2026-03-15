@@ -35,29 +35,40 @@ def render_initial_screen(app_state: AppState) -> None:
     with ui.column().classes(
         "items-center mx-auto justify-center q-pa-md md:q-pa-xl q-gutter-md w-full"
     ):
-        ui.label("Dispatch").classes("text-h5 md:text-h3 q-mb-md md:q-mb-lg")
+        with ui.row().classes("items-center q-gutter-sm q-mb-md md:q-mb-lg"):
+            ui.icon("rocket_launch").props('size="md" color="primary"')
+            ui.label("Dispatch").classes("text-h5 md:text-h3")
 
         with ui.card().classes(
             "w-full col-12 col-md-6 col-lg-4 q-mx-auto q-pa-md q-gutter-sm"
         ):
-            ui.label("Configuration Status").classes("text-subtitle1")
+            with ui.row().classes("items-center q-gutter-xs"):
+                ui.icon("settings").props('color="primary" size="sm"')
+                ui.label("Configuration Status").classes(
+                    "text-subtitle1 text-weight-medium"
+                )
             _status_row("Executor Config", app_state.is_executor_configured)
             _status_row("Action Type Defaults", app_state.is_action_types_configured)
 
         with ui.card().classes(
             "w-full col-12 col-md-6 col-lg-4 q-mx-auto q-pa-md q-gutter-sm"
         ):
-            ui.label("Get Started").classes("text-subtitle1")
+            with ui.row().classes("items-center q-gutter-xs"):
+                ui.icon("play_circle").props('color="primary" size="sm"')
+                ui.label("Get Started").classes("text-subtitle1 text-weight-medium")
             ui.button(
                 "Configure Executor",
+                icon="dns",
                 on_click=lambda: ui.navigate.to("/config/executor"),
             ).classes("w-full dispatch-touch-target")
             ui.button(
                 "Action Type Defaults",
+                icon="tune",
                 on_click=lambda: ui.navigate.to("/config/action-types"),
             ).classes("w-full dispatch-touch-target")
             ui.button(
                 "Manage Secrets",
+                icon="vpn_key",
                 on_click=lambda: ui.navigate.to("/config/secrets"),
             ).classes("w-full dispatch-touch-target")
             ui.separator()

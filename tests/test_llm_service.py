@@ -95,7 +95,9 @@ def test_generate_raises_auth_error(monkeypatch: pytest.MonkeyPatch) -> None:
     class FakeAuthenticationError(Exception):
         """Fake auth failure class."""
 
-    monkeypatch.setattr(llm_module.openai, "AuthenticationError", FakeAuthenticationError)
+    monkeypatch.setattr(
+        llm_module.openai, "AuthenticationError", FakeAuthenticationError
+    )
     create_mock = Mock(side_effect=FakeAuthenticationError("401 unauthorized"))
     monkeypatch.setattr(
         llm_module,

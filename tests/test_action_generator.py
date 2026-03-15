@@ -97,7 +97,19 @@ def test_generate_actions_orders_multiple_phases_and_assigns_unique_ids() -> Non
 
     assert len(actions) == 13
     assert [action.phase_id for action in actions] == [
-        1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        2,
+        2,
+        2,
+        2,
+        2,
     ]
     assert len({action.action_id for action in actions}) == len(actions)
     assert all(action.status == "not_started" for action in actions)

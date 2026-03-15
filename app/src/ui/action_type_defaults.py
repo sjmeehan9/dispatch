@@ -87,7 +87,9 @@ def render_action_type_defaults(app_state: AppState) -> None:
         with ui.card().classes(
             "w-full col-12 col-md-10 col-lg-8 q-mx-auto q-pa-md q-gutter-sm"
         ):
-            ui.label("Action Type Defaults").classes("text-h5 q-mb-sm")
+            with ui.row().classes("items-center q-gutter-xs q-mb-sm"):
+                ui.icon("tune").props('color="primary" size="sm"')
+                ui.label("Action Type Defaults").classes("text-h5")
 
             with ui.expansion("Available Variables", value=False).classes("w-full"):
                 for variable, description in _VARIABLE_HINTS:

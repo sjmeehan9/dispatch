@@ -89,7 +89,9 @@ def render_link_project(app_state: AppState) -> None:
         with ui.card().classes(
             "w-full col-12 col-md-8 col-lg-6 q-mx-auto q-pa-md q-gutter-sm"
         ):
-            ui.label("Link New Project").classes("text-h5 q-mb-sm")
+            with ui.row().classes("items-center q-gutter-xs q-mb-sm"):
+                ui.icon("link").props('color="primary" size="sm"')
+                ui.label("Link New Project").classes("text-h5")
 
             repo_input = ui.input(
                 "GitHub Repository",

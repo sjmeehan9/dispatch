@@ -23,10 +23,18 @@ def render_secrets_screen(app_state: AppState) -> None:
         with ui.card().classes(
             "w-full col-12 col-md-8 col-lg-6 q-mx-auto q-pa-md q-gutter-sm"
         ):
-            ui.label("Secrets Management").classes("text-h5 q-mb-sm")
-            ui.label(
-                "Secrets are stored locally in .env/.env.local and never committed to the repository."
-            ).classes("text-body2 text-grey-8")
+            with ui.row().classes("items-center q-gutter-xs q-mb-sm"):
+                ui.icon("vpn_key").props('color="primary" size="sm"')
+                ui.label("Secrets Management").classes("text-h5")
+            with (
+                ui.row()
+                .classes("items-center q-gutter-xs q-pa-sm")
+                .style("background: #e3f2fd; border-radius: 8px")
+            ):
+                ui.icon("info").props('color="primary" size="xs"')
+                ui.label(
+                    "Secrets are stored locally in .env/.env.local and never committed to the repository."
+                ).classes("text-body2 text-grey-8")
 
             github_token = ui.input(
                 "GitHub Token",

@@ -71,7 +71,9 @@ def render_load_project(app_state: AppState) -> None:
         with ui.card().classes(
             "w-full col-12 col-md-10 col-lg-8 q-mx-auto q-pa-md q-gutter-sm"
         ):
-            ui.label("Load Project").classes("text-h5 q-mb-sm")
+            with ui.row().classes("items-center q-gutter-xs q-mb-sm"):
+                ui.icon("folder_open").props('color="primary" size="sm"')
+                ui.label("Load Project").classes("text-h5")
 
             @ui.refreshable
             def _project_list() -> None:

@@ -56,7 +56,7 @@ def page_layout(
     """Render a consistent page header with breadcrumb-style context."""
     active_ui = ui_module or ui
     with active_ui.header().classes(
-        "bg-white text-primary shadow-2 q-px-md q-py-sm dispatch-page-header"
+        "text-white shadow-2 q-px-md q-py-sm dispatch-page-header"
     ):
         with active_ui.row().classes(
             "w-full items-center justify-between wrap dispatch-header-row"
