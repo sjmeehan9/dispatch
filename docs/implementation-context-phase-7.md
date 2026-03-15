@@ -32,3 +32,29 @@
 
 - E2E-005 webhook polling uses an explicit optional poll base URL environment variable to support different live deployment topologies.
 - The root --autopilot-confirm skip reason text was normalized for consistency with existing test style while preserving required behavior.
+
+---
+
+## Component 7.2 - Cross-Device Verification
+
+- Status: In Progress (AI agent tasks complete; human testing pending)
+- Date: 2026-03-15
+
+### What Was Built
+
+- Fixed `app/src/main.py` to bind Uvicorn to `0.0.0.0` instead of localhost-only, enabling LAN access from iPhone and other devices on the same network.
+- Created `docs/cross-device-verification.md` — a comprehensive verification checklist covering local network setup, macOS Chrome/Safari testing, iPhone Safari responsive/mobile testing, and OneDrive data directory sync validation.
+
+### Key Files Created/Modified
+
+- app/src/main.py (modified — added `host="0.0.0.0"` to `ui.run()`)
+- docs/cross-device-verification.md (created)
+
+### Design Decisions
+
+- Bound to `0.0.0.0` unconditionally since this is a local development tool, not a publicly deployed service. Network access is inherently needed for cross-device testing.
+- Documented HTTP-only limitation explicitly — HTTPS would require certificate setup beyond scope.
+
+### Deviations From Spec
+
+- None. All AI-agent deliverables implemented as specified.

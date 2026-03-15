@@ -469,9 +469,9 @@ def _render_action_list(
 
         progress_summary(app_state.current_project.actions)
 
-        phase_options: dict[str, int | None] = {"All Phases": None}
+        phase_options: dict[int | None, str] = {None: "All Phases"}
         for phase_id, phase_name, _ in grouped_actions:
-            phase_options[f"Phase {phase_id}: {phase_name}"] = phase_id
+            phase_options[phase_id] = f"Phase {phase_id}: {phase_name}"
 
         def _on_phase_filter_change(event: object) -> None:
             value = getattr(event, "value", None)
@@ -523,7 +523,7 @@ def _render_action_list(
                                             )
                                         ).classes("text-body2")
                                     action_status_badge(action.status)
-                            with ui.item_section(side=True):
+                            with ui.item_section().props("side"):
                                 dispatch_button = ui.button(
                                     "Dispatch",
                                     icon="send",
@@ -577,72 +577,74 @@ def _render_action_list(
                     ).props("outline")
 
     def _request_dispatch(action: Action) -> None:
+        client = ui.context.client
         if _requires_redispatch_confirmation(action):
             dialog = confirm_redispatch(
                 action,
                 on_confirm=lambda current_action=action: asyncio.create_task(
-                    _handle_dispatch(current_action)
+                    _handle_dispatch(current_action, client)
                 ),
             )
             dialog.open()
             return
 
-        asyncio.create_task(_handle_dispatch(action))
+        asyncio.create_task(_handle_dispatch(action, client))
 
-    async def _handle_dispatch(action: Action) -> None:
-        app_state.dispatching_action_id = action.action_id
-        _render_action_list.refresh()
-
-        try:
-            executor_config = app_state.config_manager.get_executor_config()
-        except (OSError, ValueError) as exc:
-            notify_error(f"Dispatch failed: {exc}")
-            app_state.dispatching_action_id = None
+    async def _handle_dispatch(action: Action, client: object) -> None:
+        with client:  # type: ignore[attr-defined]
+            app_state.dispatching_action_id = action.action_id
             _render_action_list.refresh()
-            return
 
-        if _is_llm_dispatch_enabled(app_state, executor_config):
             try:
-                payload, llm_used, fallback_reason = await with_loading(
-                    lambda: _prepare_payload_for_dispatch_review(
-                        app_state,
-                        action,
-                        executor_config,
-                    ),
-                    llm_generation_overlay,
-                )
+                executor_config = app_state.config_manager.get_executor_config()
             except (OSError, ValueError) as exc:
                 notify_error(f"Dispatch failed: {exc}")
                 app_state.dispatching_action_id = None
                 _render_action_list.refresh()
                 return
 
-            action.payload = payload
-            if not llm_used and fallback_reason:
-                notify_warning(
-                    f"LLM generation failed: {fallback_reason}. Using standard payload."
+            if _is_llm_dispatch_enabled(app_state, executor_config):
+                try:
+                    payload, llm_used, fallback_reason = await with_loading(
+                        lambda: _prepare_payload_for_dispatch_review(
+                            app_state,
+                            action,
+                            executor_config,
+                        ),
+                        llm_generation_overlay,
+                    )
+                except (OSError, ValueError) as exc:
+                    notify_error(f"Dispatch failed: {exc}")
+                    app_state.dispatching_action_id = None
+                    _render_action_list.refresh()
+                    return
+
+                action.payload = payload
+                if not llm_used and fallback_reason:
+                    notify_warning(
+                        f"LLM generation failed: {fallback_reason}. Using standard payload."
+                    )
+
+                _show_payload_editor(
+                    app_state,
+                    project_service,
+                    action,
+                    _render_action_list.refresh,
+                    refresh_response_panel,
+                    ai_generated=llm_used,
+                    allow_dispatch=True,
+                    dispatch_overlay=dispatch_overlay,
+                )
+            else:
+                await with_loading(
+                    lambda: _dispatch_action(app_state, project_service, action),
+                    dispatch_overlay,
                 )
 
-            _show_payload_editor(
-                app_state,
-                project_service,
-                action,
-                _render_action_list.refresh,
-                refresh_response_panel,
-                ai_generated=llm_used,
-                allow_dispatch=True,
-                dispatch_overlay=dispatch_overlay,
-            )
-        else:
-            await with_loading(
-                lambda: _dispatch_action(app_state, project_service, action),
-                dispatch_overlay,
-            )
-
-        app_state.dispatching_action_id = None
-        _render_action_list.refresh()
-        if refresh_response_panel is not None:
-            refresh_response_panel()
+            app_state.dispatching_action_id = None
+            _render_action_list.refresh()
+            if refresh_response_panel is not None:
+                refresh_response_panel()
 
     async def _handle_mark_complete(action: Action) -> None:
         app_state.completing_action_id = action.action_id

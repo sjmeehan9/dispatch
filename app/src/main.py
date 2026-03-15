@@ -54,7 +54,7 @@ _ensure_run_config()
 _STATIC_DIR = Path(__file__).resolve().parent / "static"
 if _STATIC_DIR.exists():
     app.add_static_files("/static", str(_STATIC_DIR))
-    ui.add_head_html('<link rel="stylesheet" href="/static/styles.css">')
+    ui.add_head_html('<link rel="stylesheet" href="/static/styles.css">', shared=True)
 
 
 def _register_global_exception_handler() -> None:
@@ -143,4 +143,4 @@ async def webhook_poll(run_id: str) -> JSONResponse:
 
 
 if __name__ in {"__main__", "__mp_main__"}:
-    ui.run(port=8080, reload=True, title="Dispatch")
+    ui.run(host="0.0.0.0", port=8080, reload=True, title="Dispatch")
