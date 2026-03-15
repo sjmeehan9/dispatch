@@ -1177,3 +1177,68 @@ payloads (from the workflow) and outbound webhook deliveries (to callers).
 > simultaneously — Secrets Manager (for the API), GitHub Actions secrets
 > (for the workflow), and any webhook receivers. A mismatch causes HMAC
 > verification failures (401 on result ingestion, failed webhook delivery).
+
+---
+
+## Dispatch Integration
+
+Dispatch is a local-first UI application that automates payload construction and dispatch to Autopilot. This section documents how Dispatch interacts with the Autopilot API.
+
+### How Dispatch Uses Autopilot
+
+Dispatch sends `POST` requests to the Autopilot `/agent/run` endpoint with payloads matching the request schema above. The `X-API-Key` header authenticates each request using the key stored in the `AUTOPILOT_API_KEY` environment variable.
+
+A typical Dispatch payload:
+
+```json
+{
+  "repository": "owner/repo-name",
+  "branch": "main",
+  "agent_instructions": "Implement Component 1.1 of Phase 1. Follow the component breakdown in docs/phase-1-component-breakdown.md.",
+  "model": "claude-opus-4.6",
+  "role": "implement",
+  "agent_paths": [".github/agents/Implement.agent.md"],
+  "callback_url": "https://example.ngrok-free.app/webhook/callback",
+  "timeout_minutes": 30
+}
+```
+
+Dispatch generates payloads from configurable action type templates with `{{variable}}` placeholders (e.g., `{{repository}}`, `{{component_name}}`). Variables are resolved from the linked project's `phase-progress.json` data at dispatch time.
+
+### Webhook Callback
+
+When a `callback_url` is provided in the dispatch payload, Autopilot sends a `POST` to that URL upon run completion. Dispatch receives these callbacks at its `/webhook/callback` endpoint (port 8080 by default) and stores the payload keyed by `run_id`.
+
+For local development, use ngrok to expose Dispatch's webhook endpoint:
+
+```bash
+ngrok http 8080
+# Use the ngrok URL as the webhook URL in Dispatch's executor config
+```
+
+Dispatch also accepts `POST /` at its root for backward compatibility — both routes store the webhook payload identically.
+
+The user views webhook results by clicking **Refresh** in the UI, which polls `/webhook/poll/{run_id}` to retrieve the stored callback data.
+
+### Configuration in Dispatch
+
+1. Set environment variables in `.env/.env.local`:
+   ```bash
+   AUTOPILOT_API_ENDPOINT=http://localhost:8000/agent/run
+   AUTOPILOT_API_KEY=<your-autopilot-api-key>
+   AUTOPILOT_WEBHOOK_URL=https://<your-ngrok-url>
+   ```
+2. In the Dispatch UI, navigate to **Configure Executor** and verify:
+   - **API Endpoint** matches `AUTOPILOT_API_ENDPOINT`
+   - **API Key Env Var** is set to `AUTOPILOT_API_KEY`
+   - **Webhook URL** is set to your public ngrok URL (Dispatch auto-appends `/webhook/callback` if only a root URL is provided)
+
+### Troubleshooting
+
+| Problem | Likely Cause | Resolution |
+|---------|-------------|------------|
+| 401 Unauthorized from Autopilot | Invalid `AUTOPILOT_API_KEY` | Verify the API key matches the Autopilot service configuration |
+| Connection refused | Autopilot service not running | Start the Autopilot service and verify the endpoint URL |
+| Webhook not received in Dispatch | Callback URL not reachable | Verify ngrok is running and the URL in the payload matches the ngrok tunnel |
+| Webhook received but UI empty | User hasn't clicked Refresh | Click the **Refresh** button in the Dispatch UI to poll for results |
+| 405 Method Not Allowed on callback | Callback URL points to wrong path | Ensure the executor config webhook URL is set correctly; Dispatch normalises root URLs automatically |

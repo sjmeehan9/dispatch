@@ -141,3 +141,37 @@
 ### Deviations From Spec
 
 - Added a compatibility `POST /` webhook receiver in addition to the specified `/webhook/callback` endpoint to support live executor and ngrok callback behavior observed during verification. This is an intentional backward-compatibility extension rather than a change to the primary callback contract.
+
+---
+
+## Component 7.3 - Documentation
+
+- Status: Completed
+- Date: 2026-03-16
+
+### What Was Built
+
+Finalized all project documentation for developer onboarding, AI agent operation, and architectural reference.
+
+- **README.md** — complete rewrite with project overview, features, prerequisites, quick start, configuration reference (executor, action type defaults with variable table, secrets, data directory), usage walkthrough, development guide, architecture overview with project structure tree, and documentation index.
+- **docs/agent-runbook.md** — AI agent operational runbook with exact commands for starting the app, running tests (full suite, E2E, live executor), quality checks (Black, isort, evals), common operations, and troubleshooting table.
+- **docs/architecture-decisions.md** — seven ADRs: NiceGUI over alternatives, JSON files over SQLite, polling over WebSocket, simple interpolation over Jinja2, local-first with OneDrive sync, modular executor protocol, optional LLM with fallback.
+- **docs/autopilot-runbook.md** — appended Dispatch Integration section: payload format, webhook callback flow, configuration steps, troubleshooting table.
+- **`.env/.env.example`** — verified all variables present (no changes needed).
+
+### Key Files Created/Modified
+
+- README.md (rewritten)
+- docs/agent-runbook.md (created)
+- docs/architecture-decisions.md (created)
+- docs/autopilot-runbook.md (extended)
+
+### Design Decisions
+
+- README structured for zero-context developers; all commands are copy-pasteable.
+- Agent runbook targets AI agents specifically with exact commands and expected outputs.
+- Architecture decisions use lightweight ADR format (Context, Decision, Rationale) for conciseness.
+
+### Deviations From Spec
+
+- None. All deliverables match the component specification.
