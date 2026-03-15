@@ -81,6 +81,25 @@ def test_build_context_returns_expected_values() -> None:
     }
 
 
+def test_build_context_normalises_root_webhook_url_to_callback_path() -> None:
+    executor_config = ExecutorConfig(
+        executor_id="autopilot",
+        executor_name="Autopilot",
+        api_endpoint="https://autopilot.example.com/api/dispatch",
+        api_key_env_key="AUTOPILOT_API_KEY",
+        webhook_url="https://dispatch.example.com",
+    )
+
+    context = PayloadResolver.build_context(
+        project=_sample_project(),
+        phase_id=3,
+        component_id="3.5",
+        executor_config=executor_config,
+    )
+
+    assert context["webhook_url"] == "https://dispatch.example.com/webhook/callback"
+
+
 def test_build_context_with_no_component_sets_component_fields_empty() -> None:
     context = PayloadResolver.build_context(
         project=_sample_project(),

@@ -96,9 +96,10 @@ def render_executor_config(app_state: AppState) -> None:
                 ),
                 validation={_URL_VALIDATION_MESSAGE: _is_valid_optional_url},
             ).classes("w-full")
-            ui.label("The URL the executor will call back to with results.").classes(
-                "text-caption text-grey-7"
-            )
+            ui.label(
+                "The URL the executor will call back to with results."
+                " Root URLs are sent to /webhook/callback automatically."
+            ).classes("text-caption text-grey-7")
 
             llm_available = app_state.llm_service.is_available()
             use_llm_switch = ui.switch(

@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+from urllib.parse import urlsplit, urlunsplit
+
 from pydantic import AnyHttpUrl, BaseModel, ConfigDict, field_validator
+
+_WEBHOOK_CALLBACK_PATH = "/webhook/callback"
 
 
 class ExecutorConfig(BaseModel):
@@ -19,12 +23,39 @@ class ExecutorConfig(BaseModel):
 
     @field_validator("webhook_url", mode="before")
     @classmethod
-    def _normalise_empty_webhook_url(cls, value: object) -> object:
-        """Normalise blank webhook strings to None for optional URL validation."""
+    def _normalise_webhook_url(cls, value: object) -> object:
+        """Normalise blank webhook URLs and root-only URLs for Dispatch callbacks."""
 
-        if value == "":
+        if value is None:
             return None
-        return value
+        if not isinstance(value, str):
+            return value
+
+        cleaned = value.strip()
+        if cleaned == "":
+            return None
+
+        parsed = urlsplit(cleaned)
+        if (
+            parsed.scheme in {"http", "https"}
+            and parsed.netloc
+            and parsed.path
+            in {
+                "",
+                "/",
+            }
+        ):
+            return urlunsplit(
+                (
+                    parsed.scheme,
+                    parsed.netloc,
+                    _WEBHOOK_CALLBACK_PATH,
+                    parsed.query,
+                    parsed.fragment,
+                )
+            )
+
+        return cleaned
 
 
 class ActionTypeDefaults(BaseModel):

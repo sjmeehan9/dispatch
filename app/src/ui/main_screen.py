@@ -569,6 +569,73 @@ def _render_action_list(
             ui.label("No actions match the selected phase.").classes("text-grey-7")
             return
 
+        def _render_action_card(
+            app_state: AppState,
+            project_service: ProjectService,
+            action: Action,
+            dispatching_action_id: str | None,
+            completing_action_id: str | None,
+            refresh_response_panel: Callable[[], None] | None,
+        ) -> None:
+            """Render a single action as a styled card with left-border colour coding."""
+            status_class = ""
+            if action.status == ActionStatus.COMPLETED:
+                status_class = " dispatch-action-completed"
+            elif action.status == ActionStatus.DISPATCHED:
+                status_class = " dispatch-action-dispatched"
+
+            action_type_value = str(action.action_type)
+            with (
+                ui.card()
+                .classes(
+                    f"w-full q-pa-sm dispatch-action-card"
+                    f" dispatch-action-{action_type_value}{status_class}"
+                )
+                .props("flat bordered")
+            ):
+                with ui.row().classes("w-full items-center justify-between no-wrap"):
+                    with ui.row().classes("items-center q-gutter-sm"):
+                        icon_name, icon_color = action_type_icon(action.action_type)
+                        ui.icon(icon_name).props(f'color="{icon_color}" size="sm"')
+                        ui.label(
+                            _action_label(app_state.current_project, action)
+                        ).classes("text-body2 text-weight-medium")
+                        action_status_badge(action.status)
+                    with ui.row().classes("items-center q-gutter-xs"):
+                        dispatch_button = ui.button(
+                            icon="send",
+                            on_click=lambda current_action=action: _request_dispatch(
+                                current_action
+                            ),
+                            color="primary",
+                        ).props("dense flat round size=sm")
+                        if dispatching_action_id == action.action_id:
+                            dispatch_button.props("loading")
+
+                        complete_button = ui.button(
+                            icon="check_circle",
+                            on_click=lambda current_action=action: _handle_mark_complete(
+                                current_action
+                            ),
+                            color="positive",
+                        ).props("dense flat round size=sm")
+                        if action.status == ActionStatus.COMPLETED:
+                            complete_button.props("disable")
+                        if completing_action_id == action.action_id:
+                            complete_button.props("loading")
+
+                        ui.button(
+                            icon="edit",
+                            on_click=lambda current_action=action: _show_payload_editor(
+                                app_state,
+                                project_service,
+                                current_action,
+                                _render_action_list.refresh,
+                                refresh_response_panel,
+                            ),
+                            color="secondary",
+                        ).props("dense flat round size=sm")
+
         for phase_id, phase_name, actions in filtered_groups:
             phase_completed = sum(
                 1 for action in actions if action.status == ActionStatus.COMPLETED
@@ -647,73 +714,6 @@ def _render_action_list(
                             refresh_response_panel,
                         ),
                     ).props("outline dense")
-
-    def _render_action_card(
-        app_state: AppState,
-        project_service: ProjectService,
-        action: Action,
-        dispatching_action_id: str | None,
-        completing_action_id: str | None,
-        refresh_response_panel: Callable[[], None] | None,
-    ) -> None:
-        """Render a single action as a styled card with left-border colour coding."""
-        status_class = ""
-        if action.status == ActionStatus.COMPLETED:
-            status_class = " dispatch-action-completed"
-        elif action.status == ActionStatus.DISPATCHED:
-            status_class = " dispatch-action-dispatched"
-
-        action_type_value = str(action.action_type)
-        with (
-            ui.card()
-            .classes(
-                f"w-full q-pa-sm dispatch-action-card"
-                f" dispatch-action-{action_type_value}{status_class}"
-            )
-            .props("flat bordered")
-        ):
-            with ui.row().classes("w-full items-center justify-between no-wrap"):
-                with ui.row().classes("items-center q-gutter-sm"):
-                    icon_name, icon_color = action_type_icon(action.action_type)
-                    ui.icon(icon_name).props(f'color="{icon_color}" size="sm"')
-                    ui.label(_action_label(app_state.current_project, action)).classes(
-                        "text-body2 text-weight-medium"
-                    )
-                    action_status_badge(action.status)
-                with ui.row().classes("items-center q-gutter-xs"):
-                    dispatch_button = ui.button(
-                        icon="send",
-                        on_click=lambda current_action=action: _request_dispatch(
-                            current_action
-                        ),
-                        color="primary",
-                    ).props("dense flat round size=sm")
-                    if dispatching_action_id == action.action_id:
-                        dispatch_button.props("loading")
-
-                    complete_button = ui.button(
-                        icon="check_circle",
-                        on_click=lambda current_action=action: _handle_mark_complete(
-                            current_action
-                        ),
-                        color="positive",
-                    ).props("dense flat round size=sm")
-                    if action.status == ActionStatus.COMPLETED:
-                        complete_button.props("disable")
-                    if completing_action_id == action.action_id:
-                        complete_button.props("loading")
-
-                    ui.button(
-                        icon="edit",
-                        on_click=lambda current_action=action: _show_payload_editor(
-                            app_state,
-                            project_service,
-                            current_action,
-                            _render_action_list.refresh,
-                            refresh_response_panel,
-                        ),
-                        color="secondary",
-                    ).props("dense flat round size=sm")
 
     def _request_dispatch(action: Action) -> None:
         client = ui.context.client

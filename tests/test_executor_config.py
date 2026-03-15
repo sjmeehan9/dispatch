@@ -244,6 +244,36 @@ def test_render_executor_config_saves_valid_values(
     assert fake_ui.notifications[-1] == ("Executor configuration saved", "positive")
 
 
+def test_render_executor_config_normalises_root_webhook_url(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Save should normalise a root webhook URL to the Dispatch callback path."""
+    fake_ui = _FakeUI()
+    monkeypatch.setattr(executor_config, "ui", fake_ui)
+    monkeypatch.setattr(
+        executor_config,
+        "notify_error",
+        lambda message: fake_ui.notify(message, "negative"),
+    )
+    monkeypatch.setattr(
+        executor_config,
+        "notify_success",
+        lambda message: fake_ui.notify(message, "positive"),
+    )
+    app_state, saves, _ = _build_app_state(tmp_path)
+
+    executor_config.render_executor_config(app_state)
+    fake_ui.inputs["Executor Name"].value = "Autopilot"
+    fake_ui.inputs["API Endpoint URL"].value = "https://api.example.com/dispatch"
+    fake_ui.inputs["API Key Environment Variable"].value = "AUTOPILOT_API_KEY"
+    fake_ui.inputs["Webhook URL (optional)"].value = "https://callback.example.com"
+
+    fake_ui.buttons["Save"].click()
+
+    assert len(saves) == 1
+    assert str(saves[0].webhook_url) == "https://callback.example.com/webhook/callback"
+
+
 def test_render_executor_config_disables_llm_toggle_without_api_key(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

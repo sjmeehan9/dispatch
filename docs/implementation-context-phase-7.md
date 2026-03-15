@@ -81,6 +81,20 @@
 - Formatting: Black + isort clean for `app/src/`.
 - Updated 4 test `_FakeUI` stubs (test_action_type_defaults, test_executor_config, test_secrets_screen, test_load_project) to add `icon()` method needed by new UI polish.
 
+**Webhook Callback Compatibility & Problem Resolution (follow-up):**
+- Investigated live ngrok failures where callbacks forwarded to `http://localhost:8080` returned `405 Method Not Allowed` for `POST /`, while the right-pane Webhook Response remained empty.
+- Confirmed the root cause was a route mismatch: Dispatch accepted webhook callbacks at `/webhook/callback`, but some live executor payloads still posted to the bare callback base URL at `/`.
+- Normalised root-only configured webhook URLs to `/webhook/callback` in `ExecutorConfig`, preserving explicit callback paths while fixing bare ngrok host inputs.
+- Added a compatibility `POST /` webhook receiver in `app/src/main.py` so existing in-flight or externally configured root callbacks continue to succeed instead of failing with 405.
+- Reused the same payload validation and storage path for both `/` and `/webhook/callback`, ensuring the Webhook Response panel can retrieve callbacks regardless of which compatible endpoint received them.
+- Clarified the executor configuration UI text so users understand that root webhook URLs are automatically sent to `/webhook/callback`.
+
+**Webhook Compatibility Follow-up Validation:**
+- Added regression coverage for root webhook URL normalisation and root callback acceptance.
+- Verified `POST /` now returns `200` and stores webhook payloads instead of returning `405 Method Not Allowed`.
+- Full Python validation after the follow-up fix: 219 passed, 1 skipped.
+- Evals remained clean with 0 violations.
+
 ### Key Files Created/Modified
 
 - app/src/models/project.py (modified — MERGE enum member)
@@ -91,16 +105,18 @@
 - app/src/ui/components.py (modified — merge icon, circular progress, dark header)
 - app/src/ui/main_screen.py (modified — card layout, component grouping, response panel)
 - app/src/ui/action_type_defaults.py (modified — merge in type list, section icon)
-- app/src/ui/executor_config.py (modified — section icon)
+- app/src/ui/executor_config.py (modified — section icon, webhook callback guidance)
 - app/src/ui/initial_screen.py (modified — title icon, section icons, button icons)
 - app/src/ui/secrets_screen.py (modified — section icon, info callout)
 - app/src/ui/link_project.py (modified — section icon)
 - app/src/ui/load_project.py (modified — section icon)
-- app/src/main.py (modified — host="0.0.0.0")
+- app/src/main.py (modified — host="0.0.0.0", root POST webhook compatibility)
+- tests/test_main.py (modified — root webhook compatibility regression test)
+- tests/test_payload_resolver.py (modified — root webhook URL normalisation regression test)
 - app/src/static/styles.css (modified — global refinements, dark header, all Phase C + D styles)
 - docs/cross-device-verification.md (created)
 - tests/test_action_type_defaults.py (modified — FakeUI icon stub)
-- tests/test_executor_config.py (modified — FakeUI icon stub)
+- tests/test_executor_config.py (modified — FakeUI icon stub, root webhook URL normalisation regression test)
 - tests/test_secrets_screen.py (modified — FakeUI icon + style stubs)
 - tests/test_load_project.py (modified — FakeUI icon stub)
 - 12 additional test files updated with merge fixtures and UI modernisation tests
@@ -120,7 +136,8 @@
 - Section heading icons added to every screen for consistent visual language.
 - Global card/button/input refinements applied via CSS rather than inline Quasar props for maintainability.
 - Info callout on secrets screen uses styled row with background rather than a separate alert component.
+- Webhook compatibility was fixed at two layers: config normalisation for newly saved root URLs and a root `POST /` compatibility endpoint for already-issued or external callbacks that still target the base URL.
 
 ### Deviations From Spec
 
-- None. All AI-agent deliverables for Phases A, B, C, D, and E implemented as specified.
+- Added a compatibility `POST /` webhook receiver in addition to the specified `/webhook/callback` endpoint to support live executor and ngrok callback behavior observed during verification. This is an intentional backward-compatibility extension rather than a change to the primary callback contract.

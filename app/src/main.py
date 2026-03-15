@@ -24,6 +24,19 @@ app_state = AppState()
 _LOGGER = logging.getLogger(__name__)
 
 
+async def _store_webhook_payload(request: Request) -> dict[str, bool]:
+    """Validate and store an incoming webhook payload by run ID."""
+    payload = await request.json()
+    run_id = payload.get("run_id")
+    if not isinstance(run_id, str) or not run_id.strip():
+        raise HTTPException(
+            status_code=400, detail="Webhook payload must include run_id"
+        )
+
+    app_state.webhook_service.store(run_id=run_id, data=payload)
+    return {"received": True}
+
+
 def _ensure_run_config() -> None:
     """Ensure NiceGUI run configuration exists for ASGI lifespan startup."""
     if app.config.has_run_config:
@@ -114,18 +127,16 @@ def main_project_page(project_id: str) -> None:
     render_main_screen(app_state, project_id)
 
 
+@app.post("/")
+async def root_webhook_callback(request: Request) -> dict[str, bool]:
+    """Accept webhook POSTs at the app root for callback URL compatibility."""
+    return await _store_webhook_payload(request)
+
+
 @app.post("/webhook/callback")
 async def webhook_callback(request: Request) -> dict[str, bool]:
     """Store incoming webhook payload by run ID."""
-    payload = await request.json()
-    run_id = payload.get("run_id")
-    if not isinstance(run_id, str) or not run_id.strip():
-        raise HTTPException(
-            status_code=400, detail="Webhook payload must include run_id"
-        )
-
-    app_state.webhook_service.store(run_id=run_id, data=payload)
-    return {"received": True}
+    return await _store_webhook_payload(request)
 
 
 @app.get("/webhook/poll/{run_id}")

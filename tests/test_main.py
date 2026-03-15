@@ -116,6 +116,18 @@ def test_webhook_callback_stores_payload(main_module: ModuleType) -> None:
     assert main_module.app_state.webhook_service.retrieve("run-123") == payload
 
 
+def test_root_post_callback_stores_payload(main_module: ModuleType) -> None:
+    """Root POST should accept webhook payloads for callback compatibility."""
+    payload = {"run_id": "run-root-123", "status": "completed"}
+
+    with TestClient(main_module.app) as client:
+        response = client.post("/", json=payload)
+
+    assert response.status_code == 200
+    assert response.json() == {"received": True}
+    assert main_module.app_state.webhook_service.retrieve("run-root-123") == payload
+
+
 def test_webhook_poll_returns_stored_payload(main_module: ModuleType) -> None:
     """Polling endpoint should return webhook payload when present."""
     payload = {"run_id": "run-456", "status": "ok"}
