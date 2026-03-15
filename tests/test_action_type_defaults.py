@@ -174,6 +174,17 @@ def _sample_defaults() -> ActionTypeDefaults:
             "callback_url": "{{webhook_url}}",
             "timeout_minutes": 15,
         },
+        merge={
+            "repository": "{{repository}}",
+            "branch": "{{branch}}",
+            "agent_instructions": "Merge PR for component {{component_id}}",
+            "model": "claude-opus-4.6",
+            "role": "merge",
+            "pr_number": "{{pr_number}}",
+            "agent_paths": "{{agent_paths}}",
+            "callback_url": "{{webhook_url}}",
+            "timeout_minutes": 10,
+        },
         document={
             "repository": "{{repository}}",
             "branch": "{{branch}}",

@@ -218,6 +218,7 @@ def test_action_type_icon_returns_expected_icon_and_color() -> None:
     assert components.action_type_icon(ActionType.IMPLEMENT) == ("code", "primary")
     assert components.action_type_icon(ActionType.TEST) == ("science", "purple")
     assert components.action_type_icon(ActionType.REVIEW) == ("rate_review", "orange")
+    assert components.action_type_icon(ActionType.MERGE) == ("merge", "green")
     assert components.action_type_icon(ActionType.DOCUMENT) == ("description", "teal")
     assert components.action_type_icon(ActionType.DEBUG) == ("bug_report", "red")
 

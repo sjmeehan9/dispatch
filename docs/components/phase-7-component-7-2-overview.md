@@ -1,47 +1,64 @@
-# Phase 7 Component 7.2 — Cross-Device Verification Overview
+# Phase 7 Component 7.2 — Cross-Device Verification & Merge Action Type
 
 ## Summary
 
-Component 7.2 validates the Dispatch application across macOS desktop browsers (Chrome and Safari), iPhone Safari via local network, and OneDrive data directory sync for cross-device data portability.
+Component 7.2 delivers two pieces of work:
 
-## AI Agent Deliverables
+1. **Cross-device verification** — Uvicorn binds to `0.0.0.0` for LAN access, with a verification checklist for manual cross-device testing.
+2. **Merge action type (Phases A & B)** — A new `MERGE` action type integrated end-to-end through models, services, configuration, and UI.
 
-### 1. Host Binding Fix (`app/src/main.py`)
+## Cross-Device Verification
 
-The `ui.run()` call was updated to bind to `host="0.0.0.0"` instead of the default localhost-only binding. This enables the application to be accessed from other devices on the same local network — a prerequisite for iPhone Safari testing.
+- `ui.run()` updated to `host="0.0.0.0"` for LAN access from other devices.
+- `docs/cross-device-verification.md` created with structured checklists for macOS Chrome/Safari, iPhone Safari, and OneDrive sync.
+- Human testing deliverables remain pending.
 
-### 2. Cross-Device Verification Checklist (`docs/cross-device-verification.md`)
+## Merge Action Type — Architecture
 
-A structured verification document with six sections:
+**Models:**
+- `ActionType.MERGE` added to the `StrEnum` (between REVIEW and DOCUMENT).
+- `ActionTypeDefaults.merge` field added to the Pydantic model.
 
-- **Prerequisites** — required software, devices, and configuration
-- **Local Network Setup** — how to find Mac IP, verify host binding, start the app, test access from iPhone
-- **macOS Desktop Checklist** — 16-item functional test matrix for Chrome and Safari covering all screens, navigation, dispatch workflow, save/load, LLM toggle, and error handling
-- **iPhone Safari Checklist** — 10-item mobile-specific test matrix covering responsive layout, touch targets, text readability, form usability, scrolling, viewport, and safe area
-- **OneDrive Sync Checklist** — 6-item data portability test covering directory configuration, project save, cloud sync, cross-device access, and concurrent access
-- **Known Limitations** — HTTP-only access, async OneDrive sync, Safari input zoom, WebSocket reconnect, no offline support
+**Action Generation (`ActionGenerator`):**
+- `generate_actions` restructured: each component produces `implement → review → merge`, followed by phase-level `test` and `document`.
+- New `propagate_pr_number` classmethod writes `pr_number` into review/merge payloads sharing the same phase+component when an implement action completes.
 
-## Human Testing Deliverables (Pending)
+**Configuration (`ConfigManager`):**
+- `get_action_type_defaults` injects merge defaults from bundled `defaults.yaml` when loading projects created before this field existed.
 
-The following require manual testing by the developer:
+**defaults.yaml:**
+- Merge template: `role=merge`, `pr_number={{pr_number}}`, `timeout_minutes=10`.
+- Review `agent_instructions` updated to be component-scoped.
 
-1. macOS Chrome verification against the checklist
-2. macOS Safari verification against the checklist
-3. iPhone Safari verification against the checklist
-4. OneDrive data directory sync verification
-
-Results should be recorded in the "Test Results Summary" table at the bottom of the verification checklist.
+**UI:**
+- `components.py` — merge icon (`merge`, green).
+- `main_screen.py` — `_action_label` handles component-scoped review/merge labels; `_mark_complete` and webhook refresh trigger PR propagation.
+- `action_type_defaults.py` — merge added to the editable type list.
 
 ## Key Files
 
-| File | Action |
+| File | Change |
 |------|--------|
-| `app/src/main.py` | Modified — `host="0.0.0.0"` |
-| `docs/cross-device-verification.md` | Created |
+| `app/src/models/project.py` | `MERGE` enum member |
+| `app/src/models/executor.py` | `merge` field on `ActionTypeDefaults` |
+| `app/config/defaults.yaml` | Merge template, updated review instructions |
+| `app/src/services/action_generator.py` | Per-component grouping, `propagate_pr_number` |
+| `app/src/services/config_manager.py` | Backward compat merge injection |
+| `app/src/ui/components.py` | Merge icon mapping |
+| `app/src/ui/main_screen.py` | Propagation wiring, component-scoped labels |
+| `app/src/ui/action_type_defaults.py` | Merge in type list and variable hints |
+| `app/src/main.py` | `host="0.0.0.0"` binding |
 
-## Validation
+## Test Coverage
 
-- All 210 existing tests pass (no regression)
-- Black/isort formatting clean
-- Evals pass (no TODO/FIXME, all docstrings present)
-- 75% test coverage on `app/src/`
+All 10 affected test files updated with merge fixtures. Two new tests added:
+- `test_propagate_pr_number_updates_review_and_merge_for_same_component`
+- `test_get_action_type_defaults_injects_merge_when_missing`
+
+Full suite: **213 passed**, 1 skipped, 1 pre-existing environment-specific failure. Evals: all pass.
+
+## Design Decisions
+
+- Per-component `implement→review→merge` grouping aligns with the PR-per-component workflow.
+- `pr_number` stored as string in payload for consistency with variable substitution.
+- Backward compat reads merge defaults from bundled YAML (not hardcoded) so future template updates propagate automatically.

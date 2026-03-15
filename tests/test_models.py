@@ -89,6 +89,7 @@ def test_action_defaults_use_not_started_and_none_responses() -> None:
         ActionType.IMPLEMENT,
         ActionType.TEST,
         ActionType.REVIEW,
+        ActionType.MERGE,
         ActionType.DOCUMENT,
         ActionType.DEBUG,
     ],
@@ -151,13 +152,14 @@ def test_action_type_defaults_includes_all_action_payload_templates() -> None:
         implement={"role": "implement"},
         test={"role": "implement"},
         review={"role": "review"},
+        merge={"role": "merge"},
         document={"role": "implement"},
         debug={"role": "implement"},
     )
 
     dumped = defaults.model_dump()
 
-    assert set(dumped) == {"implement", "test", "review", "document", "debug"}
+    assert set(dumped) == {"implement", "test", "review", "merge", "document", "debug"}
 
 
 def test_payload_template_extracts_variables_from_nested_values() -> None:

@@ -41,6 +41,7 @@ def _sample_action_defaults() -> ActionTypeDefaults:
         implement={"role": "implement", "repository": "{{repository}}"},
         test={"role": "test", "repository": "{{repository}}"},
         review={"role": "review", "repository": "{{repository}}"},
+        merge={"role": "merge", "repository": "{{repository}}"},
         document={"role": "document", "repository": "{{repository}}"},
         debug={"role": "debug", "repository": "{{repository}}"},
     )
@@ -208,7 +209,7 @@ def test_defaults_yaml_templates_include_required_placeholders() -> None:
         "agent_paths": "{{agent_paths}}",
         "callback_url": "{{webhook_url}}",
     }
-    for action_type in ("implement", "test", "review", "document", "debug"):
+    for action_type in ("implement", "test", "review", "merge", "document", "debug"):
         for key, expected_value in expected_common.items():
             assert action_defaults[action_type][key] == expected_value
 
@@ -222,4 +223,31 @@ def test_defaults_yaml_templates_include_required_placeholders() -> None:
     assert "{{phase_name}}" in action_defaults["test"]["agent_instructions"]
     assert action_defaults["review"]["pr_number"] == "{{pr_number}}"
     assert action_defaults["review"]["role"] == "review"
+    assert action_defaults["merge"]["pr_number"] == "{{pr_number}}"
+    assert action_defaults["merge"]["role"] == "merge"
     assert action_defaults["debug"]["agent_instructions"] == ""
+
+
+def test_get_action_type_defaults_injects_merge_when_missing(
+    tmp_path, monkeypatch
+) -> None:
+    """Loading a persisted file without the merge key should inject bundled defaults."""
+    settings = _build_settings(monkeypatch, tmp_path)
+    manager = ConfigManager(settings)
+
+    legacy_payload = {
+        "implement": {"role": "implement"},
+        "test": {"role": "test"},
+        "review": {"role": "review"},
+        "document": {"role": "document"},
+        "debug": {"role": "debug"},
+    }
+    settings.config_dir.mkdir(parents=True, exist_ok=True)
+    (settings.config_dir / ACTION_DEFAULTS_FILENAME).write_text(
+        json.dumps(legacy_payload, indent=2), encoding="utf-8"
+    )
+
+    loaded = manager.get_action_type_defaults()
+
+    assert "merge" in loaded.model_dump()
+    assert loaded.merge["role"] == "merge"

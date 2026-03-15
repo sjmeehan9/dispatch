@@ -15,6 +15,7 @@ class ActionType(StrEnum):
     IMPLEMENT = "implement"
     TEST = "test"
     REVIEW = "review"
+    MERGE = "merge"
     DOCUMENT = "document"
     DEBUG = "debug"
 

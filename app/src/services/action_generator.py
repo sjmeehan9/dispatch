@@ -26,6 +26,9 @@ class ActionGenerator:
     ) -> list[Action]:
         """Generate ordered actions for all phases.
 
+        Each component produces an implement → review → merge triplet.
+        Phase-level test and document actions follow all component actions.
+
         Args:
             phases: Parsed project phases.
             action_type_defaults: Default payload templates by action type.
@@ -49,6 +52,22 @@ class ActionGenerator:
                         template=action_type_defaults.implement,
                     )
                 )
+                actions.append(
+                    cls._create_action(
+                        action_type=ActionType.REVIEW,
+                        phase_id=phase.phase_id,
+                        component_id=component.component_id,
+                        template=action_type_defaults.review,
+                    )
+                )
+                actions.append(
+                    cls._create_action(
+                        action_type=ActionType.MERGE,
+                        phase_id=phase.phase_id,
+                        component_id=component.component_id,
+                        template=action_type_defaults.merge,
+                    )
+                )
 
             actions.append(
                 cls._create_action(
@@ -56,14 +75,6 @@ class ActionGenerator:
                     phase_id=phase.phase_id,
                     component_id=None,
                     template=action_type_defaults.test,
-                )
-            )
-            actions.append(
-                cls._create_action(
-                    action_type=ActionType.REVIEW,
-                    phase_id=phase.phase_id,
-                    component_id=None,
-                    template=action_type_defaults.review,
                 )
             )
             actions.append(
@@ -77,6 +88,33 @@ class ActionGenerator:
 
         _LOGGER.info("Generated %d actions for %d phases", len(actions), len(phases))
         return actions
+
+    @classmethod
+    def propagate_pr_number(
+        cls,
+        actions: list[Action],
+        source_action: Action,
+        pr_number: int | str,
+    ) -> None:
+        """Set pr_number on review/merge actions that follow a completed implement.
+
+        Args:
+            actions: Full action list for the project.
+            source_action: The implement action whose PR number is now known.
+            pr_number: The PR number to propagate.
+        """
+
+        if source_action.action_type != ActionType.IMPLEMENT:
+            return
+
+        for action in actions:
+            if (
+                action.phase_id == source_action.phase_id
+                and action.component_id == source_action.component_id
+                and action.action_type in (ActionType.REVIEW, ActionType.MERGE)
+                and action.status == ActionStatus.NOT_STARTED
+            ):
+                action.payload["pr_number"] = str(pr_number)
 
     @classmethod
     def insert_debug_action(

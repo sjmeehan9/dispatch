@@ -86,6 +86,9 @@ class ConfigManager:
                 self._action_defaults_path.as_posix(),
             )
             payload = json.loads(self._action_defaults_path.read_text(encoding="utf-8"))
+            if "merge" not in payload:
+                _, bundled = self._load_defaults()
+                payload["merge"] = bundled.merge
             return ActionTypeDefaults.model_validate(payload)
 
         _, defaults = self._load_defaults()

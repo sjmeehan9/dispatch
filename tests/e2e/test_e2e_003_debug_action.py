@@ -44,7 +44,7 @@ def test_e2e_003_debug_action_insert_edit_dispatch_complete(
     )
     assert (
         _action_type_value(phase_one_actions[insertion_position + 1].action_type)
-        == "implement"
+        == "review"
     )
 
     debug_action.payload["agent_instructions"] = (

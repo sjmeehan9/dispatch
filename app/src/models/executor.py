@@ -33,6 +33,7 @@ class ActionTypeDefaults(BaseModel):
     implement: dict[str, object]
     test: dict[str, object]
     review: dict[str, object]
+    merge: dict[str, object]
     document: dict[str, object]
     debug: dict[str, object]
 

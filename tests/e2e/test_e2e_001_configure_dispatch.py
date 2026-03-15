@@ -83,14 +83,16 @@ def test_e2e_001_configure_and_dispatch_workflow(
     )
 
     actions = ActionGenerator.generate_actions(project.phases, loaded_defaults)
-    assert len(actions) == 10
-    assert [_action_type_value(action.action_type) for action in actions[:6]] == [
+    assert len(actions) == 16
+    assert [_action_type_value(action.action_type) for action in actions[:8]] == [
         "implement",
-        "implement",
-        "test",
         "review",
-        "document",
+        "merge",
         "implement",
+        "review",
+        "merge",
+        "test",
+        "document",
     ]
 
     first_action = actions[0]

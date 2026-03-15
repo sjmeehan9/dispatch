@@ -24,6 +24,7 @@ _ACTION_TYPE_ICON_MAP: dict[str, tuple[str, str]] = {
     ActionType.IMPLEMENT.value: ("code", "primary"),
     ActionType.TEST.value: ("science", "purple"),
     ActionType.REVIEW.value: ("rate_review", "orange"),
+    ActionType.MERGE.value: ("merge", "green"),
     ActionType.DOCUMENT.value: ("description", "teal"),
     ActionType.DEBUG.value: ("bug_report", "red"),
 }

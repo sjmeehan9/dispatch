@@ -12,6 +12,7 @@ from nicegui import run, ui
 
 from app.src.models import Action, ActionStatus, ActionType, ExecutorResponse, Project
 from app.src.services import (
+    ActionGenerator,
     ExecutorAuthError,
     ExecutorConnectionError,
     ExecutorDispatchError,
@@ -55,9 +56,27 @@ def _project_service_for_main_screen(app_state: AppState) -> ProjectService:
 def _action_label(project: Project, action: Action) -> str:
     """Build a human-readable action label for the action list."""
     action_type = str(action.action_type)
-    if action_type != ActionType.IMPLEMENT.value:
-        return f"{action_type.title()} Phase {action.phase_id}"
 
+    # Component-scoped actions: implement, review, merge
+    if (
+        action_type
+        in (
+            ActionType.IMPLEMENT.value,
+            ActionType.REVIEW.value,
+            ActionType.MERGE.value,
+        )
+        and action.component_id
+    ):
+        component_name = _resolve_component_name(project, action)
+        type_label = action_type.title()
+        return f"{type_label}: {component_name}"
+
+    # Phase-scoped actions: test, document, debug
+    return f"{action_type.title()} Phase {action.phase_id}"
+
+
+def _resolve_component_name(project: Project, action: Action) -> str:
+    """Resolve a friendly component name from a project and action."""
     component_name = action.component_id or "Unknown Component"
     phase = next(
         (item for item in project.phases if item.phase_id == action.phase_id), None
@@ -73,7 +92,7 @@ def _action_label(project: Project, action: Action) -> str:
         )
         if component is not None:
             component_name = component.component_name
-    return f"Implement: {component_name}"
+    return component_name
 
 
 def _response_color_class(status_code: int) -> str:
@@ -99,6 +118,40 @@ def _mark_complete(app_state: AppState, action: Action) -> None:
     """Mark an action as completed and keep it selected in the response panel."""
     action.status = ActionStatus.COMPLETED
     app_state.last_dispatched_action = action
+
+    if app_state.current_project is not None:
+        _try_propagate_pr_number(app_state, action)
+
+
+def _extract_pr_number_from_webhook(action: Action) -> str | None:
+    """Extract PR number from an action's webhook response, if present."""
+    if action.webhook_response is None:
+        return None
+    result = action.webhook_response.get("result")
+    if isinstance(result, dict):
+        pr_number = result.get("pr_number")
+        if pr_number is not None and str(pr_number).strip():
+            return str(pr_number)
+    pr_number = action.webhook_response.get("pr_number")
+    if pr_number is not None and str(pr_number).strip():
+        return str(pr_number)
+    return None
+
+
+def _try_propagate_pr_number(app_state: AppState, action: Action) -> None:
+    """Attempt to propagate PR number from a completed implement action."""
+    if action.action_type != ActionType.IMPLEMENT:
+        return
+    if app_state.current_project is None:
+        return
+
+    pr_number = _extract_pr_number_from_webhook(action)
+    if pr_number is None:
+        return
+
+    ActionGenerator.propagate_pr_number(
+        app_state.current_project.actions, action, pr_number
+    )
 
 
 def _extract_run_id(action: Action) -> str | None:
@@ -777,6 +830,7 @@ def _render_response_panel(
                                 return
 
                             current_action.webhook_response = webhook_payload
+                            _try_propagate_pr_number(app_state, current_action)
                             if app_state.current_project is not None:
                                 try:
                                     await run.io_bound(
@@ -789,6 +843,7 @@ def _render_response_panel(
                                     )
 
                             _render_response_panel.refresh()
+                            refresh_action_list()
 
                         ui.button(
                             "Refresh",

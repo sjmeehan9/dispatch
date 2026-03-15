@@ -123,6 +123,14 @@ def sample_action_type_defaults() -> ActionTypeDefaults:
             "pr_number": "{{pr_number}}",
             "callback_url": "{{webhook_url}}",
         },
+        merge={
+            "repository": "{{repository}}",
+            "branch": "{{branch}}",
+            "agent_instructions": "Merge the PR for {{component_name}} ({{component_id}}) of Phase {{phase_id}}.",
+            "role": "merge",
+            "pr_number": "{{pr_number}}",
+            "callback_url": "{{webhook_url}}",
+        },
         document={
             "repository": "{{repository}}",
             "branch": "{{branch}}",

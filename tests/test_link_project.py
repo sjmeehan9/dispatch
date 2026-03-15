@@ -93,6 +93,7 @@ def _sample_action_defaults() -> ActionTypeDefaults:
         implement=payload,
         test=payload,
         review={**payload, "pr_number": "{{pr_number}}"},
+        merge={**payload, "pr_number": "{{pr_number}}"},
         document=payload,
         debug=payload,
     )

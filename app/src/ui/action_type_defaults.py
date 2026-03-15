@@ -11,7 +11,14 @@ from app.src.models import ActionTypeDefaults
 from app.src.ui.components import notify_error, notify_success, page_layout
 from app.src.ui.state import AppState
 
-_ACTION_TYPES: tuple[str, ...] = ("implement", "test", "review", "document", "debug")
+_ACTION_TYPES: tuple[str, ...] = (
+    "implement",
+    "test",
+    "review",
+    "merge",
+    "document",
+    "debug",
+)
 _FIELD_ORDER: tuple[str, ...] = (
     "repository",
     "branch",
@@ -44,7 +51,7 @@ _VARIABLE_HINTS: tuple[tuple[str, str], ...] = (
     ("{{component_breakdown_doc}}", "Path to the phase component breakdown document."),
     ("{{agent_paths}}", "JSON array of discovered repository agent instruction paths."),
     ("{{webhook_url}}", "Configured webhook callback URL."),
-    ("{{pr_number}}", "Pull request number for review actions."),
+    ("{{pr_number}}", "Pull request number for review and merge actions."),
 )
 
 

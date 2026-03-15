@@ -47,9 +47,12 @@ def test_e2e_002_load_project_and_run_phase_actions(
 
     assert [_action_type_value(action.action_type) for action in phase_one_actions] == [
         "implement",
-        "implement",
-        "test",
         "review",
+        "merge",
+        "implement",
+        "review",
+        "merge",
+        "test",
         "document",
     ]
 

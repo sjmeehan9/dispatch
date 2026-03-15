@@ -113,6 +113,12 @@ def _sample_action_defaults() -> ActionTypeDefaults:
             "role": "review",
             "pr_number": "{{pr_number}}",
         },
+        merge={
+            "repository": "{{repository}}",
+            "agent_instructions": "Merge PR for component {{component_id}}",
+            "role": "merge",
+            "pr_number": "{{pr_number}}",
+        },
         document={
             "repository": "{{repository}}",
             "agent_instructions": "Document phase {{phase_id}}",
@@ -146,12 +152,15 @@ def test_full_dispatch_workflow_with_mocked_external_dependencies(
     generated_actions = app_state.action_generator.generate_actions(
         project.phases, action_defaults
     )
-    assert len(generated_actions) == 5
+    assert len(generated_actions) == 8
     assert [action.action_type for action in generated_actions] == [
         "implement",
-        "implement",
-        "test",
         "review",
+        "merge",
+        "implement",
+        "review",
+        "merge",
+        "test",
         "document",
     ]
 

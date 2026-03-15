@@ -22,6 +22,11 @@ def test_settings_uses_dispatch_data_dir_from_environment(
 
 
 def test_settings_falls_back_to_default_dispatch_data_dir(monkeypatch) -> None:
+    monkeypatch.setattr(
+        Settings,
+        "_resolve_env_file_path",
+        staticmethod(lambda: Path("/tmp/dispatch-test-empty.env")),
+    )
     monkeypatch.delenv("DISPATCH_DATA_DIR", raising=False)
 
     settings = Settings()

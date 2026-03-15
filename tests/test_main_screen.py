@@ -360,7 +360,7 @@ def test_poll_webhook_returns_none_when_missing() -> None:
 def test_mark_complete_sets_completed_status_and_tracks_action() -> None:
     """Mark complete helper should update status and current response selection."""
     action = _sample_project().actions[0]
-    app_state = SimpleNamespace(last_dispatched_action=None)
+    app_state = SimpleNamespace(last_dispatched_action=None, current_project=None)
 
     main_screen._mark_complete(app_state, action)
 
@@ -437,6 +437,7 @@ def test_insert_debug_action_inserts_at_position_and_persists(monkeypatch) -> No
         implement={"repository": "{{repository}}"},
         test={"phase": "{{phase_name}}"},
         review={"phase": "{{phase_name}}"},
+        merge={"phase": "{{phase_name}}"},
         document={"phase": "{{phase_name}}"},
         debug={
             "repository": "{{repository}}",
