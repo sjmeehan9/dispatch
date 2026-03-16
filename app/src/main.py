@@ -16,6 +16,7 @@ from app.src.ui.executor_config import render_executor_config
 from app.src.ui.initial_screen import render_initial_screen
 from app.src.ui.link_project import render_link_project
 from app.src.ui.load_project import render_load_project
+from app.src.ui.login_screen import render_login_screen
 from app.src.ui.main_screen import render_main_screen
 from app.src.ui.secrets_screen import render_secrets_screen
 from app.src.ui.state import AppState
@@ -43,14 +44,14 @@ def _ensure_run_config() -> None:
         return
 
     app.config.add_run_config(
-        reload=True,
+        reload=app_state.settings.reload_enabled,
         title="Dispatch",
         viewport="width=device-width, initial-scale=1",
         favicon=None,
         dark=False,
         language="en-US",
         binding_refresh_interval=0.1,
-        reconnect_timeout=3.0,
+        reconnect_timeout=10.0,
         message_history_length=1000,
         cache_control_directives=(
             "public, max-age=31536000, immutable, stale-while-revalidate=31536000"
@@ -85,45 +86,109 @@ def _register_global_exception_handler() -> None:
 _register_global_exception_handler()
 
 
+app.storage.secret = app_state.settings.access_token or "dispatch-local-dev"
+
+
+@app.middleware("http")
+async def _auth_guard(request: Request, call_next):  # type: ignore[no-untyped-def]
+    """Enforce token auth for non-page webhook poll endpoint when enabled."""
+    access_token = app_state.settings.access_token
+    if not access_token:
+        return await call_next(request)
+
+    if request.url.path.startswith("/webhook/poll/"):
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header != f"Bearer {access_token}":
+            return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
+
+    return await call_next(request)
+
+
+def _require_auth() -> bool:
+    """Require login for UI pages when access token protection is enabled."""
+    if not app_state.settings.access_token:
+        return True
+
+    if app.storage.user.get("authenticated"):
+        return True
+
+    app.storage.user["redirect"] = ui.context.client.page.path
+    ui.navigate.to("/login")
+    return False
+
+
+def _redirect_after_login() -> None:
+    """Navigate to the user-requested page after successful authentication."""
+    redirect_path = app.storage.user.get("redirect", "/")
+    if not isinstance(redirect_path, str) or not redirect_path:
+        redirect_path = "/"
+    ui.navigate.to(redirect_path)
+
+
+@ui.page("/login")
+def login_page() -> None:
+    """Render login page when token auth is configured."""
+    access_token = app_state.settings.access_token
+    if not access_token:
+        ui.navigate.to("/")
+        return
+
+    render_login_screen(expected_token=access_token, on_success=_redirect_after_login)
+
+
 @ui.page("/")
 def initial_screen_page() -> None:
     """Render the initial screen."""
+    if not _require_auth():
+        return
     render_initial_screen(app_state)
 
 
 @ui.page("/config/executor")
 def executor_config_page() -> None:
     """Render the executor configuration screen."""
+    if not _require_auth():
+        return
     render_executor_config(app_state)
 
 
 @ui.page("/config/action-types")
 def action_types_page() -> None:
     """Render the action-type defaults screen."""
+    if not _require_auth():
+        return
     render_action_type_defaults(app_state)
 
 
 @ui.page("/config/secrets")
 def secrets_page() -> None:
     """Render the secrets management screen."""
+    if not _require_auth():
+        return
     render_secrets_screen(app_state)
 
 
 @ui.page("/project/link")
 def link_project_page() -> None:
     """Render the link project screen."""
+    if not _require_auth():
+        return
     render_link_project(app_state)
 
 
 @ui.page("/project/load")
 def load_project_page() -> None:
     """Render the load project screen."""
+    if not _require_auth():
+        return
     render_load_project(app_state)
 
 
 @ui.page("/project/{project_id}")
 def main_project_page(project_id: str) -> None:
     """Render the main project screen."""
+    if not _require_auth():
+        return
     render_main_screen(app_state, project_id)
 
 
@@ -154,4 +219,9 @@ async def webhook_poll(run_id: str) -> JSONResponse:
 
 
 if __name__ in {"__main__", "__mp_main__"}:
-    ui.run(host="0.0.0.0", port=8080, reload=True, title="Dispatch")
+    ui.run(
+        host="0.0.0.0",
+        port=8080,
+        reload=app_state.settings.reload_enabled,
+        title="Dispatch",
+    )

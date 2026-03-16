@@ -49,6 +49,22 @@ class Settings:
 
         return None
 
+    @property
+    def access_token(self) -> str | None:
+        """Return the optional access token used for remote UI protection."""
+        value = os.environ.get("DISPATCH_ACCESS_TOKEN")
+        if value is None:
+            return None
+
+        stripped = value.strip()
+        return stripped or None
+
+    @property
+    def reload_enabled(self) -> bool:
+        """Return whether NiceGUI auto-reload should be enabled."""
+        value = os.environ.get("DISPATCH_RELOAD", "true")
+        return value.strip().lower() == "true"
+
     @staticmethod
     def _resolve_env_file_path() -> Path:
         """Resolve the local env file path relative to the repository root."""

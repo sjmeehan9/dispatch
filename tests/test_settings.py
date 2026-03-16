@@ -80,3 +80,40 @@ def test_get_settings_returns_singleton_instance(monkeypatch) -> None:
     second = settings_module.get_settings()
 
     assert first is second
+
+
+def test_access_token_returns_none_for_empty_or_missing(monkeypatch) -> None:
+    monkeypatch.setattr(
+        Settings,
+        "_resolve_env_file_path",
+        staticmethod(lambda: Path("/tmp/dispatch-test-empty.env")),
+    )
+    monkeypatch.delenv("DISPATCH_ACCESS_TOKEN", raising=False)
+    assert Settings().access_token is None
+
+    monkeypatch.setenv("DISPATCH_ACCESS_TOKEN", "   ")
+    assert Settings().access_token is None
+
+
+def test_access_token_returns_trimmed_value(monkeypatch) -> None:
+    monkeypatch.setattr(
+        Settings,
+        "_resolve_env_file_path",
+        staticmethod(lambda: Path("/tmp/dispatch-test-empty.env")),
+    )
+    monkeypatch.setenv("DISPATCH_ACCESS_TOKEN", "  abc123  ")
+
+    assert Settings().access_token == "abc123"
+
+
+def test_reload_enabled_defaults_true_and_parses_false(monkeypatch) -> None:
+    monkeypatch.setattr(
+        Settings,
+        "_resolve_env_file_path",
+        staticmethod(lambda: Path("/tmp/dispatch-test-empty.env")),
+    )
+    monkeypatch.delenv("DISPATCH_RELOAD", raising=False)
+    assert Settings().reload_enabled is True
+
+    monkeypatch.setenv("DISPATCH_RELOAD", "false")
+    assert Settings().reload_enabled is False

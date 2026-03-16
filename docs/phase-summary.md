@@ -142,4 +142,23 @@ Phase 7 delivered the capstone validation, documentation, and release preparatio
 
 ## Project Completion Status
 
-All 7 phases delivered. The repository is release-ready: fully documented, tested, and clean.
+All 8 phases delivered. The repository is release-ready: fully documented, tested, and clean.
+
+---
+
+## Phase 8 Overview
+
+Phase 8 introduced optional remote-access security and mobile stability improvements for tunnel-based iPhone usage without breaking local LAN workflows.
+
+## Components Delivered
+
+### Component 8.1 - Remote Access Authentication, Resilience, and Documentation
+- **What was built:** Optional token-gated UI auth via `/login`, page-level route protection, bearer-protected webhook poll endpoint, reconnect timeout increase to 10 seconds, reload configurability, and remote-access documentation updates.
+- **Key files:** `app/src/main.py`, `app/src/config/settings.py`, `app/src/ui/login_screen.py`, `.env/.env.example`, `README.md`, `docs/cross-device-verification.md`, `tests/test_settings.py`, `tests/test_main.py`
+
+## Phase 8 Outcomes
+
+- Remote access over ngrok/tunnels can be protected with `DISPATCH_ACCESS_TOKEN`.
+- Local trusted-network behavior remains unchanged when no token is configured.
+- Mobile reconnect behavior is more tolerant of transient network drops.
+- Documentation now includes non-LAN remote verification steps.

@@ -50,6 +50,50 @@ python -m app.src.main
 
 Open your browser to `http://localhost:8080`.
 
+## Remote Access (iPhone from Any Network)
+
+Dispatch can be accessed from any network using a tunnel service. Because the app binds to `0.0.0.0:8080`, a tunnel that forwards to `localhost:8080` exposes the full UI.
+
+### Using ngrok
+
+```bash
+ngrok http 8080
+```
+
+Use the ngrok HTTPS URL in Safari on iPhone. You can use the same URL base for executor callbacks by setting `AUTOPILOT_WEBHOOK_URL`.
+
+### Security for Public Tunnels
+
+When exposing Dispatch over a public tunnel, set an access token:
+
+```bash
+# .env/.env.local
+DISPATCH_ACCESS_TOKEN=your-secret-token-here
+```
+
+When set, UI routes require authentication through `/login`.
+
+Webhook callback endpoints remain open so external executors can deliver results:
+- `POST /`
+- `POST /webhook/callback`
+
+Webhook polling is token-protected when remote auth is enabled and expects:
+
+```text
+Authorization: Bearer <DISPATCH_ACCESS_TOKEN>
+```
+
+### Connection Resilience
+
+The app uses a 10-second reconnection timeout to better tolerate transient mobile network drops.
+
+You can also disable auto-reload for more stable long-lived sessions:
+
+```bash
+# .env/.env.local
+DISPATCH_RELOAD=false
+```
+
 ## Configuration
 
 ### Executor Config

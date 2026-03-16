@@ -6,8 +6,8 @@ Dispatch is built incrementally across 7 phases — from project bootstrap throu
 
 ## Summary
 
-- **Number of Phases**: 7
-- **Number of Components**: 40
+- **Number of Phases**: 8
+- **Number of Components**: 41
 
 ---
 
@@ -294,6 +294,38 @@ Dispatch is built incrementally across 7 phases — from project bootstrap throu
 - [ ] CI pipeline is green with all checks passing
 - [ ] No secrets, tokens, or API keys exist anywhere in the repository
 - [ ] `.gitignore` covers `.env/`, `~/.dispatch/`, `.venv/`, `__pycache__/`
+
+---
+
+## Phase 8: Remote Access Security & Mobile Stability
+
+### Phase Overview
+
+**Overview**: Add optional access-token protection for tunnel-exposed UI access, improve reconnect behavior for mobile networks, and formalize remote verification guidance.
+
+**Objective**: Dispatch remains simple for LAN usage by default, but can be safely exposed over public tunnels for iPhone access from any network.
+
+**Dependencies**: Phase 7 complete.
+
+### Phase Key Deliverables
+
+- **Authentication gate**: Optional token-protected UI pages with login route
+- **Endpoint hardening**: Keep webhook callbacks open for executor compatibility while protecting webhook polling when auth is enabled
+- **Mobile resilience**: Increase reconnect timeout and make reload configurable
+- **Documentation**: Remote access setup and non-LAN verification checklist updates
+
+### Phase Components
+
+- **Component 8.1**: Remote access authentication, resilience, and documentation — add `DISPATCH_ACCESS_TOKEN` and `DISPATCH_RELOAD`, create login screen, gate UI pages, preserve webhook callback compatibility, protect poll endpoint with bearer token, tune reconnect timeout for mobile, update README and cross-device verification checklist, and add regression tests.
+
+### Phase Acceptance Criteria
+
+- [ ] UI auth is opt-in and backward compatible when token is unset
+- [ ] Tunnel-based access can be authenticated using shared token login
+- [ ] Webhook callback delivery remains functional for executors
+- [ ] Webhook polling requires bearer token when auth is enabled
+- [ ] Reconnect behavior is improved for unstable mobile networks
+- [ ] Remote access documentation and checklist are complete
 
 ---
 

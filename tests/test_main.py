@@ -37,6 +37,7 @@ def test_all_required_routes_return_success(main_module: ModuleType) -> None:
     """All Component 4.1 screen routes should be defined."""
     with TestClient(main_module.app) as client:
         for route in (
+            "/login",
             "/config/executor",
             "/config/action-types",
             "/config/secrets",
@@ -147,3 +148,22 @@ def test_webhook_poll_returns_pending_for_unknown_run(main_module: ModuleType) -
 
     assert response.status_code == 404
     assert response.json() == {"run_id": "unknown-run-id", "status": "pending"}
+
+
+def test_webhook_poll_requires_bearer_when_access_token_set(
+    main_module: ModuleType, monkeypatch
+) -> None:
+    """Polling endpoint should require bearer token when auth is enabled."""
+    monkeypatch.setenv("DISPATCH_ACCESS_TOKEN", "token-123")
+
+    with TestClient(main_module.app) as client:
+        unauthenticated = client.get("/webhook/poll/protected-run")
+        authenticated = client.get(
+            "/webhook/poll/protected-run",
+            headers={"Authorization": "Bearer token-123"},
+        )
+
+    assert unauthenticated.status_code == 401
+    assert unauthenticated.json() == {"detail": "Unauthorized"}
+    assert authenticated.status_code == 404
+    assert authenticated.json() == {"run_id": "protected-run", "status": "pending"}

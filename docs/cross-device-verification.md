@@ -123,19 +123,38 @@ Restart the application after changing this value.
 
 ---
 
-## 6. Known Limitations
+## 6. Remote Access Verification (Non-LAN)
+
+### 6.1 Prerequisites
+
+- ngrok (or another tunnel) is running and forwarding to `localhost:8080`
+- `DISPATCH_ACCESS_TOKEN` is set in `.env/.env.local`
+- iPhone is on a different network (cellular or different Wi-Fi)
+
+### 6.2 Remote Checklist
+
+| # | Test | Pass |
+|---|------|------|
+| 6.1 | Open tunnel URL on iPhone; login screen appears | ☐ |
+| 6.2 | Enter correct access token; redirected to initial screen | ☐ |
+| 6.3 | Enter wrong token; error notification shown and no access granted | ☐ |
+| 6.4 | Section 4 tests (4.1-4.10) pass through tunnel URL | ☐ |
+| 6.5 | Connection recovery: toggle airplane mode briefly; UI reconnects | ☐ |
+| 6.6 | Dispatch action and verify webhook callback arrives through tunnel | ☐ |
+
+## 7. Known Limitations
 
 | Limitation | Detail |
 |------------|--------|
 | **HTTP only** | The app runs over HTTP on the local network. Some browser APIs (clipboard, notifications) may be restricted on non-localhost HTTP origins. HTTPS requires additional certificate setup not covered here. |
 | **No real-time sync** | OneDrive sync is file-based and asynchronous. Changes may take 30–60 seconds to propagate. The app does not detect external file changes — you must reload/re-load the project manually. |
 | **iPhone input zoom** | Safari on iOS may zoom into input fields with font size < 16px. NiceGUI's Quasar components use 16px by default, but custom-styled inputs should be verified. |
-| **WebSocket reconnect** | If the iPhone locks or the network connection drops, NiceGUI's WebSocket may disconnect. The app should reconnect automatically within 3 seconds (configured `reconnect_timeout`), but a page refresh may be needed in some cases. |
+| **WebSocket reconnect** | If the iPhone locks or the network connection drops, NiceGUI's WebSocket may disconnect. The app should reconnect automatically within 10 seconds (configured `reconnect_timeout`), but a page refresh may be needed in some cases. |
 | **No offline support** | The app requires an active network connection to the Mac. There is no service worker or offline mode. |
 
 ---
 
-## 7. Test Results Summary
+## 8. Test Results Summary
 
 Record your test results here after completing verification:
 
