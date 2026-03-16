@@ -13,13 +13,18 @@ from fastapi.testclient import TestClient
 
 @pytest.fixture(scope="module")
 def startup_module(tmp_path_factory: pytest.TempPathFactory) -> ModuleType:
-    """Import the main app module with an isolated data directory."""
+    """Import the main app module with an isolated data directory.
+
+    Avoids importlib.reload to prevent duplicate middleware registration
+    and storage secret errors in NiceGUI.
+    """
     os.environ["DISPATCH_DATA_DIR"] = str(
         tmp_path_factory.mktemp("dispatch-startup-tests")
     )
+    os.environ["DISPATCH_ACCESS_TOKEN"] = ""
     module_name = "app.src.main"
     if module_name in sys.modules:
-        return importlib.reload(sys.modules[module_name])
+        return sys.modules[module_name]
     return importlib.import_module(module_name)
 
 

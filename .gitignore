@@ -1,6 +1,9 @@
 # DS_Store
 .DS_Store
 
+# NiceGUI auto-generated files
+.nicegui/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

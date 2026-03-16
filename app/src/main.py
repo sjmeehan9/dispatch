@@ -9,6 +9,7 @@ from typing import Any
 from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
 from nicegui import app, ui
+from nicegui.storage import set_storage_secret
 
 from app.src.ui.action_type_defaults import render_action_type_defaults
 from app.src.ui.components import notify_error
@@ -76,7 +77,10 @@ def _register_global_exception_handler() -> None:
 
     def _handle_exception(exc: Exception) -> None:
         _LOGGER.exception("Unhandled application error", exc_info=exc)
-        notify_error("An unexpected error occurred. Check the console for details.")
+        try:
+            notify_error("An unexpected error occurred. Check the console for details.")
+        except RuntimeError:
+            pass  # No UI context (background task) — already logged above
 
     on_exception = getattr(app, "on_exception", None)
     if callable(on_exception):
@@ -86,7 +90,7 @@ def _register_global_exception_handler() -> None:
 _register_global_exception_handler()
 
 
-app.storage.secret = app_state.settings.access_token or "dispatch-local-dev"
+set_storage_secret(app_state.settings.access_token or "dispatch-local-dev")
 
 
 @app.middleware("http")

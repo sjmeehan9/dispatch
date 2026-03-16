@@ -37,3 +37,10 @@
 ### Deviations From Spec
 
 - Added explicit bearer validation on webhook polling endpoint to provide API-level protection when remote auth is enabled.
+
+### Follow-Up Fixes (Post-Commit)
+
+- Switched `app.storage.secret = ...` to `set_storage_secret()` for correct NiceGUI API usage.
+- Wrapped `notify_error` in global exception handler with `try/except RuntimeError` for background task contexts where no UI slot exists.
+- Added `.nicegui/` to `.gitignore` to exclude auto-generated runtime files.
+- Fixed mobile CSS panel scroll heights (`dispatch-panel-scroll`, `dispatch-main-panels`) for better responsiveness on small screens.

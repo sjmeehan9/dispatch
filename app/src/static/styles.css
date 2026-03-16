@@ -180,9 +180,13 @@ body,
 
 @media (max-width: 1023px) {
   .dispatch-panel-scroll {
-    min-height: auto;
+    height: 60vh;
+    min-height: 400px;
     max-height: none;
-    height: auto;
+  }
+  
+  .dispatch-main-panels {
+    min-height: auto;
   }
 }
 
