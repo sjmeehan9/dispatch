@@ -1,3 +1,11 @@
+# Docs
+docs/
+
+# AI
+.claude/
+.github/agents/
+.github/instructions/
+
 # DS_Store
 .DS_Store
 
