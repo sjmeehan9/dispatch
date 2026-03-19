@@ -227,8 +227,6 @@ Dispatch is a single-process Python application built on NiceGUI (which wraps Fa
 - **Service Layer** — pure Python modules for project management, action generation, payload resolution, executor dispatch, and webhook storage
 - **Data Layer** — JSON files in the local filesystem for project configs, executor settings, and action state
 
-Key design choices are documented in [docs/architecture-decisions.md](docs/architecture-decisions.md).
-
 ### Project Structure
 
 ```
