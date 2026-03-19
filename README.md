@@ -236,6 +236,10 @@ dispatch/
 ├── app/
 │   ├── config/
 │   │   └── defaults.yaml          # Default executor and action type templates
+│   ├── docs/
+│   │   ├── agent-runbook.md       # AI agent operational runbook
+│   │   ├── executor-configuration-guide.md  # Executor setup guide
+│   │   └── phase-progress-guide.md          # phase-progress.json reference
 │   ├── src/
 │   │   ├── main.py                # NiceGUI app entry point and webhook routes
 │   │   ├── exceptions.py          # Custom exception hierarchy
@@ -268,7 +272,6 @@ dispatch/
 │   │   │   └── state.py           # Application state container
 │   │   └── static/
 │   │       └── styles.css         # Custom CSS (card styles, animations)
-├── docs/                          # Project documentation
 ├── tests/                         # pytest test suite
 │   ├── e2e/                       # End-to-end service-layer tests
 │   └── ...                        # Unit and integration tests
@@ -283,14 +286,11 @@ dispatch/
 
 ## Documentation
 
-- [Project Brief](docs/brief.md)
-- [Solution Design](docs/solution-design.md)
-- [Architecture Decisions](docs/architecture-decisions.md)
-- [Phase Plan](docs/phase_plan.md)
-- [Agent Runbook](docs/agent-runbook.md) — for AI agents operating the application
-- [Autopilot Runbook](docs/autopilot-runbook.md) — Autopilot executor reference
-- [Cross-Device Verification](docs/cross-device-verification.md)
-- [E2E Testing Scenarios](docs/e2e-testing-scenarios.md)
+### Application Guides (`app/docs/`)
+
+- [Executor Configuration Guide](app/docs/executor-configuration-guide.md) — how to set up and configure an executor
+- [Phase Progress JSON Guide](app/docs/phase-progress-guide.md) — required fields and structure of `phase-progress.json`
+- [Agent Runbook](app/docs/agent-runbook.md) — for AI agents operating the application
 
 ## License
 

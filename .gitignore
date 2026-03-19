@@ -1,5 +1,6 @@
-# Docs
+# Docs (root-level planning docs excluded; app/docs/ is tracked)
 docs/
+!app/docs/
 
 # AI
 .claude/
