@@ -10,6 +10,7 @@ from typing import Any
 from app.src.models import ExecutorConfig, Project, ResolvedPayload
 
 _PLACEHOLDER_PATTERN = re.compile(r"\{\{(\w+)\}\}")
+_FULL_PLACEHOLDER_PATTERN = re.compile(r"^\{\{(\w+)\}\}$")
 
 
 class PayloadResolver:
@@ -112,6 +113,20 @@ class PayloadResolver:
         """Recursively resolve placeholder values for nested payload objects."""
 
         if isinstance(value, str):
+            full_match = _FULL_PLACEHOLDER_PATTERN.match(value)
+            if full_match:
+                variable_name = full_match.group(1)
+                if variable_name in context:
+                    raw = context[variable_name]
+                    try:
+                        parsed = json.loads(raw)
+                    except (json.JSONDecodeError, TypeError):
+                        return raw
+                    if isinstance(parsed, (list, dict)):
+                        return parsed
+                    return raw
+                unresolved.append(variable_name)
+                return value
             return _PLACEHOLDER_PATTERN.sub(
                 lambda match: cls._replace_match(match, context, unresolved),
                 value,

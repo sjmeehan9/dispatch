@@ -145,7 +145,10 @@ def test_resolve_payload_replaces_placeholders_recursively() -> None:
         "phase": "Core Backend Services",
         "component_id": "3.5",
     }
-    assert resolved.payload["agents"] == [context["agent_paths"], "literal"]
+    assert resolved.payload["agents"] == [
+        [".claude/agents/implement.md", ".github/agents/review.md"],
+        "literal",
+    ]
     assert resolved.unresolved_variables == []
 
 
@@ -177,3 +180,32 @@ def test_resolve_payload_tracks_unresolved_when_context_is_empty() -> None:
 
     assert resolved.payload["pr_number"] == "{{pr_number}}"
     assert resolved.unresolved_variables == ["pr_number"]
+
+
+def test_resolve_payload_deserialises_json_array_for_full_placeholder() -> None:
+    """A placeholder that is the entire value and resolves to a JSON array
+    should produce a native list, not a JSON string."""
+
+    agent_list = [".claude/agents/implement.md", ".github/agents/review.md"]
+    payload = {"agent_paths": "{{agent_paths}}"}
+    context = {"agent_paths": json.dumps(agent_list)}
+
+    resolved = PayloadResolver.resolve_payload(payload, context)
+
+    assert resolved.payload["agent_paths"] == agent_list
+    assert isinstance(resolved.payload["agent_paths"], list)
+    assert resolved.unresolved_variables == []
+
+
+def test_resolve_payload_keeps_json_string_when_embedded_in_text() -> None:
+    """A placeholder embedded in surrounding text should remain a string,
+    even if the context value is a JSON array."""
+
+    agent_list = [".claude/agents/implement.md"]
+    payload = {"note": "Agents: {{agent_paths}} end"}
+    context = {"agent_paths": json.dumps(agent_list)}
+
+    resolved = PayloadResolver.resolve_payload(payload, context)
+
+    assert resolved.payload["note"] == f"Agents: {json.dumps(agent_list)} end"
+    assert isinstance(resolved.payload["note"], str)
